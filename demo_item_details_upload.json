@@ -1,0 +1,130 @@
+[
+  {
+    "itemId": "68b0bd1bfbd64afb9636ac3d",
+    "imagesByColor": [
+      {
+        "color": "Natural Titanium",
+        "hexCode": "#D4C4A8",
+        "images": [
+          {
+            "itemDetailImageId": "iphone15pro_titanium_001",
+            "priority": 1
+          },
+          {
+            "itemDetailImageId": "iphone15pro_titanium_002",
+            "priority": 2
+          }
+        ],
+        "sizes": [
+          {
+            "size": "128GB",
+            "stock": 25,
+            "skuId": "SKU-IPHONE15PRO-TITANIUM-128GB-001"
+          },
+          {
+            "size": "256GB",
+            "stock": 30,
+            "skuId": "SKU-IPHONE15PRO-TITANIUM-256GB-002"
+          }
+        ]
+      }
+    ],
+    "sizeChart": [
+      {
+        "size": "128GB",
+        "storage": "128GB",
+        "ram": "8GB"
+      },
+      {
+        "size": "256GB",
+        "storage": "256GB",
+        "ram": "8GB"
+      }
+    ],
+    "howToMeasure": {
+      "height": "Measure from top to bottom",
+      "width": "Measure from left to right",
+      "depth": "Measure from front to back"
+    },
+    "deliveryDescription": "Free delivery within 2-3 business days",
+    "returnPolicy": "30-day return policy with original packaging",
+    "deliveryPincode": [400001, 400002, 400003, 400004, 400005],
+    "PPQ": [
+      {
+        "minQty": 1,
+        "maxQty": 5,
+        "pricePerUnit": 119999
+      },
+      {
+        "minQty": 6,
+        "maxQty": 10,
+        "pricePerUnit": 114999
+      }
+    ],
+    "About": "Latest iPhone 15 Pro with titanium design and A17 Pro chip"
+  },
+  {
+    "itemId": "68b0bd1bfbd64afb9636ac3f",
+    "imagesByColor": [
+      {
+        "color": "Space Black",
+        "hexCode": "#1C1C1E",
+        "images": [
+          {
+            "itemDetailImageId": "galaxy_s24_black_001",
+            "priority": 1
+          },
+          {
+            "itemDetailImageId": "galaxy_s24_black_002",
+            "priority": 2
+          }
+        ],
+        "sizes": [
+          {
+            "size": "128GB",
+            "stock": 20,
+            "skuId": "SKU-GALAXYS24-BLACK-128GB-001"
+          },
+          {
+            "size": "256GB",
+            "stock": 25,
+            "skuId": "SKU-GALAXYS24-BLACK-256GB-002"
+          }
+        ]
+      }
+    ],
+    "sizeChart": [
+      {
+        "size": "128GB",
+        "storage": "128GB",
+        "ram": "8GB"
+      },
+      {
+        "size": "256GB",
+        "storage": "256GB",
+        "ram": "8GB"
+      }
+    ],
+    "howToMeasure": {
+      "height": "Measure from top to bottom",
+      "width": "Measure from left to right",
+      "depth": "Measure from front to back"
+    },
+    "deliveryDescription": "Free delivery within 2-3 business days",
+    "returnPolicy": "30-day return policy with original packaging",
+    "deliveryPincode": [400001, 400002, 400003, 400004, 400005],
+    "PPQ": [
+      {
+        "minQty": 1,
+        "maxQty": 5,
+        "pricePerUnit": 89999
+      },
+      {
+        "minQty": 6,
+        "maxQty": 10,
+        "pricePerUnit": 84999
+      }
+    ],
+    "About": "Samsung Galaxy S24 with AI-powered features and stunning display"
+  }
+]

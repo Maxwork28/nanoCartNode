@@ -1,0 +1,5 @@
+name,description,MRP,totalStock,discountedPrice,defaultColor,isItemDetail,categoryId,subCategoryId,itemImageId,filters,userAverageRating
+Smartphone X,High-end smartphone with latest features,50000,100,45000,Black,true,64a1b2c3d4e5f6789012345,64a1b2c3d4e5f6789012346,img001,Brand:TechBrand|Type:Smartphone,4.5
+Gaming Laptop Pro,High-performance gaming laptop,80000,50,72000,Black,true,64a1b2c3d4e5f6789012345,64a1b2c3d4e5f6789012347,img002,Brand:GamingBrand|Type:Laptop,4.8
+Cotton T-Shirt,Comfortable everyday t-shirt,1000,200,800,Blue,true,64a1b2c3d4e5f6789012348,64a1b2c3d4e5f6789012349,img003,Material:Cotton|Style:Casual,4.0
+Designer Dress,Elegant evening dress,3000,75,2400,Red,true,64a1b2c3d4e5f6789012348,64a1b2c3d4e5f6789012350,img004,Style:Evening|Occasion:Formal,4.6
