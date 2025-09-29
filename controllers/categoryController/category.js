@@ -204,3 +204,80 @@ exports.getCategoryById = async (req, res) => {
     return res.status(500).json(apiResponse(500, false, error.message));
   }
 };
+
+// Search Categories with pagination and sorting
+exports.searchCategories = async (req, res) => {
+  try {
+    const {
+      keyword = '',
+      page = 1,
+      limit = 10,
+      sortBy = 'createdAt',
+      sortOrder = 'desc'
+    } = req.query;
+
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+
+    if (Number.isNaN(pageNum) || Number.isNaN(limitNum) || pageNum < 1 || limitNum < 1) {
+      return res.status(400).json(apiResponse(400, false, 'Page and limit must be positive numbers'));
+    }
+    if (limitNum > 100) {
+      return res.status(400).json(apiResponse(400, false, 'Limit cannot exceed 100 items per page'));
+    }
+
+    const skip = (pageNum - 1) * limitNum;
+
+    const searchQuery = {};
+    if (keyword && keyword.trim()) {
+      const regex = new RegExp(keyword.trim(), 'i');
+      searchQuery.$or = [
+        { name: { $regex: regex } },
+        { description: { $regex: regex } }
+      ];
+    }
+
+    const allowedSortFields = ['name', 'description', 'createdAt', 'updatedAt'];
+    const validSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
+    const validSortOrder = sortOrder === 'asc' ? 1 : -1;
+    const sortQuery = { [validSortBy]: validSortOrder };
+
+    const [categories, totalCount] = await Promise.all([
+      Category.find(searchQuery)
+        .sort(sortQuery)
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      Category.countDocuments(searchQuery)
+    ]);
+
+    const totalPages = Math.ceil(totalCount / limitNum) || 1;
+
+    const data = {
+      categories,
+      pagination: {
+        currentPage: pageNum,
+        totalPages,
+        totalCount,
+        limit: limitNum,
+      },
+      searchInfo: {
+        keyword: keyword || null,
+        sortBy: validSortBy,
+        sortOrder: sortOrder === 'asc' ? 'asc' : 'desc'
+      }
+    };
+
+    return res.status(200).json(
+      apiResponse(
+        200,
+        true,
+        keyword ? `Found ${totalCount} categories matching "${keyword}"` : `Retrieved ${totalCount} categories`,
+        data
+      )
+    );
+  } catch (error) {
+    console.error('Error searching categories:', error.message);
+    return res.status(500).json(apiResponse(500, false, 'Internal server error while searching categories'));
+  }
+};

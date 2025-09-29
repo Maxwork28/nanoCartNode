@@ -313,3 +313,128 @@ exports.getTrendySubCategories = async (req, res) => {
     });
   }
 };
+
+/**
+ * Search subcategories with pagination and keyword filtering
+ * Supports searching by name, description, and category name
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+exports.searchSubcategories = async (req, res) => {
+  try {
+    const { 
+      keyword = '', 
+      page = 1, 
+      limit = 10, 
+      sortBy = 'createdAt', 
+      sortOrder = 'desc',
+      categoryId = ''
+    } = req.query;
+
+    // Validate pagination parameters
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+    
+    if (pageNum < 1 || limitNum < 1) {
+      return res
+        .status(400)
+        .json(apiResponse(400, false, "Page and limit must be positive numbers"));
+    }
+
+    // Validate limit (max 100 items per page)
+    if (limitNum > 100) {
+      return res
+        .status(400)
+        .json(apiResponse(400, false, "Limit cannot exceed 100 items per page"));
+    }
+
+    // Calculate skip value for pagination
+    const skip = (pageNum - 1) * limitNum;
+
+    // Build search query
+    let searchQuery = {};
+    
+    // Category filter
+    if (categoryId && categoryId.trim()) {
+      searchQuery.categoryId = categoryId.trim();
+    }
+
+    // Keyword search
+    if (keyword && keyword.trim()) {
+      const searchKeyword = keyword.trim();
+      
+      // Create regex for case-insensitive search
+      const regex = new RegExp(searchKeyword, 'i');
+      
+      // Search in name and description fields
+      searchQuery.$or = [
+        { name: { $regex: regex } },
+        { description: { $regex: regex } }
+      ];
+    }
+
+    // Validate sort parameters
+    const allowedSortFields = ['name', 'description', 'createdAt', 'updatedAt', 'isTrendy'];
+    const validSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
+    const validSortOrder = sortOrder === 'asc' ? 1 : -1;
+    
+    const sortQuery = { [validSortBy]: validSortOrder };
+
+    // Execute search with pagination and populate category information
+    const [subcategories, totalCount] = await Promise.all([
+      SubCategory.find(searchQuery)
+        .populate('categoryId', 'name')
+        .sort(sortQuery)
+        .skip(skip)
+        .limit(limitNum)
+        .lean(), // Use lean() for better performance
+      SubCategory.countDocuments(searchQuery)
+    ]);
+
+    // Calculate pagination info
+    const totalPages = Math.ceil(totalCount / limitNum);
+    const hasNextPage = pageNum < totalPages;
+    const hasPrevPage = pageNum > 1;
+
+    // Prepare response data
+    const responseData = {
+      subcategories,
+      pagination: {
+        currentPage: pageNum,
+        totalPages,
+        totalCount,
+        limit: limitNum,
+        hasNextPage,
+        hasPrevPage,
+        nextPage: hasNextPage ? pageNum + 1 : null,
+        prevPage: hasPrevPage ? pageNum - 1 : null
+      },
+      searchInfo: {
+        keyword: keyword || null,
+        categoryId: categoryId || null,
+        sortBy: validSortBy,
+        sortOrder: sortOrder
+      }
+    };
+
+    // Success response
+    return res
+      .status(200)
+      .json(
+        apiResponse(
+          200, 
+          true, 
+          keyword 
+            ? `Found ${totalCount} subcategories matching "${keyword}"` 
+            : `Retrieved ${totalCount} subcategories`,
+          responseData
+        )
+      );
+
+  } catch (error) {
+    console.error("Error searching subcategories:", error.message);
+    return res
+      .status(500)
+      .json(apiResponse(500, false, "Internal server error while searching subcategories"));
+  }
+};

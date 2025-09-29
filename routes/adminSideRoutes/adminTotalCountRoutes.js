@@ -1,15 +1,18 @@
 const express = require('express');
 const router = express.Router();
-const { verifyToken } = require('../../middlewares/verifyToken.js');
-const { isAdmin } = require('../../middlewares/isAdmin.js');
+
+const { verifyTokenAndRole } = require('../../middlewares/verifyToken.js');
 const {
   getTotalUsers,
   getTotalPartners,
   getTotalCategories,
   getTotalSubcategories,
   getTotalItems,
+  getLowStockItems,
   getAllUsers,
   getAllPartners,
+  toggleUserStatus,
+  togglePartnerStatus,
   getUsersMonthlyTrends,
   getPartnersMonthlyTrends,
   getItemsMonthlyTrends,
@@ -22,35 +25,44 @@ const {
 
 
 
-// Route to get total count of Users
-router.get('/users/total', verifyToken, isAdmin, getTotalUsers);
+// Route to get total count of Users (Admin and SubAdmin can access)
+router.get('/users/total', ...verifyTokenAndRole(['Admin', 'SubAdmin']), getTotalUsers);
 
-// Route to get total count of Partners
-router.get('/partners/total', verifyToken, isAdmin, getTotalPartners);
+// Route to get total count of Partners (Admin and SubAdmin can access)
+router.get('/partners/total', ...verifyTokenAndRole(['Admin', 'SubAdmin']), getTotalPartners);
 
-// Route to get total count of Categories
-router.get('/categories/total', verifyToken, isAdmin, getTotalCategories);
+// Route to get total count of Categories (Admin and SubAdmin can access)
+router.get('/categories/total', ...verifyTokenAndRole(['Admin', 'SubAdmin']), getTotalCategories);
 
-// Route to get total count of Subcategories
-router.get('/subcategories/total', verifyToken, isAdmin, getTotalSubcategories);
+// Route to get total count of Subcategories (Admin and SubAdmin can access)
+router.get('/subcategories/total', ...verifyTokenAndRole(['Admin', 'SubAdmin']), getTotalSubcategories);
 
-// Route to get total count of Items
-router.get('/items/total', verifyToken, isAdmin, getTotalItems);
+// Route to get total count of Items (Admin and SubAdmin can access)
+router.get('/items/total', ...verifyTokenAndRole(['Admin', 'SubAdmin']), getTotalItems);
 
-// Route to get all users
-router.get('/users', verifyToken, isAdmin, getAllUsers);
+// Route to get low stock items count (Admin and SubAdmin can access)
+router.get('/items/low-stock', ...verifyTokenAndRole(['Admin', 'SubAdmin']), getLowStockItems);
 
-// Route to get all partners
-router.get('/partners', verifyToken, isAdmin, getAllPartners);
+// Route to get all users (Admin and SubAdmin can access)
+router.get('/users', ...verifyTokenAndRole(['Admin', 'SubAdmin']), getAllUsers);
 
-// Monthly trends routes
-router.get('/users/monthly-trends', verifyToken, isAdmin, getUsersMonthlyTrends);
-router.get('/partners/monthly-trends', verifyToken, isAdmin, getPartnersMonthlyTrends);
-router.get('/items/monthly-trends', verifyToken, isAdmin, getItemsMonthlyTrends);
-router.get('/categories/monthly-trends', verifyToken, isAdmin, getCategoriesMonthlyTrends);
-router.get('/subcategories/monthly-trends', verifyToken, isAdmin, getSubcategoriesMonthlyTrends);
-router.get('/inventory/monthly-trends', verifyToken, isAdmin, getInventoryMonthlyTrends);
-router.get('/revenue/monthly-trends', verifyToken, isAdmin, getRevenueMonthlyTrends);
-router.get('/orders/monthly-trends', verifyToken, isAdmin, getOrdersMonthlyTrends);
+// Route to toggle user active status (Admin and SubAdmin can access)
+router.put('/users/:userId/toggle-status', ...verifyTokenAndRole(['Admin', 'SubAdmin']), toggleUserStatus);
+
+// Route to get all partners (Admin and SubAdmin can access)
+router.get('/partners', ...verifyTokenAndRole(['Admin', 'SubAdmin']), getAllPartners);
+
+// Route to toggle partner active status (Admin and SubAdmin can access)
+router.put('/partners/:partnerId/toggle-status', ...verifyTokenAndRole(['Admin', 'SubAdmin']), togglePartnerStatus);
+
+// Monthly trends routes (Admin and SubAdmin can access)
+router.get('/users/monthly-trends', ...verifyTokenAndRole(['Admin', 'SubAdmin']), getUsersMonthlyTrends);
+router.get('/partners/monthly-trends', ...verifyTokenAndRole(['Admin', 'SubAdmin']), getPartnersMonthlyTrends);
+router.get('/items/monthly-trends', ...verifyTokenAndRole(['Admin', 'SubAdmin']), getItemsMonthlyTrends);
+router.get('/categories/monthly-trends', ...verifyTokenAndRole(['Admin', 'SubAdmin']), getCategoriesMonthlyTrends);
+router.get('/subcategories/monthly-trends', ...verifyTokenAndRole(['Admin', 'SubAdmin']), getSubcategoriesMonthlyTrends);
+router.get('/inventory/monthly-trends', ...verifyTokenAndRole(['Admin', 'SubAdmin']), getInventoryMonthlyTrends);
+router.get('/revenue/monthly-trends', ...verifyTokenAndRole(['Admin', 'SubAdmin']), getRevenueMonthlyTrends);
+router.get('/orders/monthly-trends', ...verifyTokenAndRole(['Admin', 'SubAdmin']), getOrdersMonthlyTrends);
 
 module.exports = router;

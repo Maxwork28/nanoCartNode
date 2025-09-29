@@ -1,27 +1,24 @@
 const express = require('express');
 const router = express.Router();
-const { createCoupon, applyCouponByPartner, applyCouponByUser,updateCoupon, deleteCoupon,getAllCoupons } = require('../../controllers/couponController/couponController'); // Adjusted path to couponController
-const { isUser } = require('../../middlewares/isUser');
-const {isPartner}=require("../../middlewares/isPartner")
-const { isAdmin } = require('../../middlewares/isAdmin');
-const { verifyToken } = require('../../middlewares/verifyToken');
+const { createCoupon, applyCouponByPartner, applyCouponByUser, updateCoupon, deleteCoupon, getAllCoupons } = require('../../controllers/couponController/couponController'); // Adjusted path
+const { verifyToken, verifyTokenAndRole } = require('../../middlewares/verifyToken');
+const { auditLogger } = require('../../middlewares/auditLogger');
+// Create a new coupon (Admin and SubAdmin can access)
+router.post('/create', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), createCoupon);
 
-// Create a new coupon (Admin only)
-router.post('/create', verifyToken, isAdmin, createCoupon);
-
-// Apply a coupon to a purchase amount (User only)
-router.post('/apply-partner', verifyToken,isPartner, applyCouponByPartner);
+// Apply a coupon to a purchase amount (Partner only)
+router.post('/apply-partner', ...verifyTokenAndRole(['Partner']), applyCouponByPartner);
 
 // Apply a coupon to a purchase amount (User only)
-router.post('/apply-user', verifyToken,isUser, applyCouponByUser);
+router.post('/apply-user', ...verifyTokenAndRole(['User']), applyCouponByUser);
 
-// Update a coupon by couponCode (Admin only)
-router.put('/update', verifyToken, isAdmin, updateCoupon);
+// Update a coupon by couponCode (Admin and SubAdmin can access)
+router.put('/update', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), updateCoupon);
 
-// Delete a coupon by couponCode (Admin only)
-router.delete('/delete', verifyToken, isAdmin, deleteCoupon);
+// Delete a coupon by couponCode (Admin and SubAdmin can access)
+router.delete('/delete', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), deleteCoupon);
 
-//Get All coupon 
-router.get("/",verifyToken,isAdmin,getAllCoupons)
+// Get all coupons (Admin and SubAdmin can access)
+router.get('/', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), getAllCoupons);
 
 module.exports = router;

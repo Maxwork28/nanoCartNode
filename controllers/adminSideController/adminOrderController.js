@@ -248,31 +248,201 @@ exports.getUserOrderDetails = async (req, res) => {
   }
 };
 
-// Get all orders (user and partner)
+// Get all orders (user and partner) with enhanced filtering and pagination
 exports.getAllOrders = async (req, res) => {
-  console.log('[GET ALL ORDERS] Request received');
+  console.log('[GET ALL ORDERS] Request received with query:', req.query);
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
+    const {
+      page = 1,
+      limit = 10,
+      search = '',
+      status = '',
+      paymentMode = '',
+      paymentStatus = '',
+      orderType = '', // 'user', 'partner', or '' for both
+      minAmount = '',
+      maxAmount = '',
+      startDate = '',
+      endDate = '',
+      sortBy = 'createdAt',
+      sortOrder = 'desc'
+    } = req.query;
 
-    const userOrders = await UserOrder.find({})
-      .populate('orderDetails.itemId', 'name MRP discountedPrice image')
-      .populate('shippingAddressId', 'addressDetail')
-      .skip(skip)
-      .limit(limit)
-      .lean();
-    const partnerOrders = await PartnerOrder.find({})
-      .populate('orderProductDetails.itemId', 'name MRP discountedPrice image')
-      .populate('shippingAddressId', 'addressDetail')
-      .skip(skip)
-      .limit(limit)
-      .lean();
-    const totalUserOrders = await UserOrder.countDocuments({});
-    const totalPartnerOrders = await PartnerOrder.countDocuments({});
-    const allOrders = { userOrders, partnerOrders, totalUserOrders, totalPartnerOrders, page, limit };
-    console.log('[GET ALL ORDERS] User Orders:', userOrders.length, 'Partner Orders:', partnerOrders.length);
-    return res.status(200).json(apiResponse(200, true, 'All orders retrieved successfully', allOrders));
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    console.log('🔍 Parsed Query Params:', {
+      page: pageNum,
+      limit: limitNum,
+      skip,
+      search,
+      status,
+      paymentMode,
+      paymentStatus,
+      orderType,
+      minAmount,
+      maxAmount,
+      startDate,
+      endDate,
+      sortBy,
+      sortOrder
+    });
+
+    // Build filter query for user orders
+    const userFilterQuery = {};
+    const partnerFilterQuery = {};
+
+    // Search functionality
+    if (search) {
+      const searchRegex = { $regex: search, $options: 'i' };
+      userFilterQuery.$or = [
+        { orderId: searchRegex },
+        { 'shippingAddressId.addressDetail.fullName': searchRegex },
+        { 'orderDetails.itemId.name': searchRegex }
+      ];
+      partnerFilterQuery.$or = [
+        { orderId: searchRegex },
+        { 'shippingAddressId.addressDetail.fullName': searchRegex },
+        { 'orderProductDetails.itemId.name': searchRegex }
+      ];
+    }
+
+    // Status filter
+    if (status) {
+      userFilterQuery.orderStatus = { $regex: `^${status}$`, $options: 'i' };
+      partnerFilterQuery.orderStatus = { $regex: `^${status}$`, $options: 'i' };
+    }
+
+    // Payment mode filter
+    if (paymentMode) {
+      if (paymentMode === 'online') {
+        userFilterQuery.paymentMethod = { $regex: '^online$', $options: 'i' };
+        partnerFilterQuery.isOnlinePayment = true;
+      } else if (paymentMode === 'cod') {
+        userFilterQuery.paymentMethod = { $regex: '^cod$', $options: 'i' };
+        partnerFilterQuery.isCodPayment = true;
+      } else if (paymentMode === 'upi') {
+        userFilterQuery.paymentMethod = { $regex: '^upi$', $options: 'i' };
+        partnerFilterQuery.isOnlinePayment = true;
+      } else if (paymentMode === 'card') {
+        userFilterQuery.paymentMethod = { $regex: '^card$', $options: 'i' };
+        partnerFilterQuery.isOnlinePayment = true;
+      }
+    }
+
+    // Payment status filter
+    if (paymentStatus) {
+      userFilterQuery.paymentStatus = { $regex: `^${paymentStatus}$`, $options: 'i' };
+      partnerFilterQuery.paymentStatus = { $regex: `^${paymentStatus}$`, $options: 'i' };
+    }
+
+    // Amount range filter
+    if (minAmount || maxAmount) {
+      const amountFilter = {};
+      if (minAmount) amountFilter.$gte = parseFloat(minAmount);
+      if (maxAmount) amountFilter.$lte = parseFloat(maxAmount);
+      userFilterQuery.totalAmount = amountFilter;
+      partnerFilterQuery.totalAmount = amountFilter;
+    }
+
+    // Date range filter
+    if (startDate || endDate) {
+      const dateFilter = {};
+      if (startDate) dateFilter.$gte = new Date(startDate);
+      if (endDate) {
+        const endDateObj = new Date(endDate);
+        endDateObj.setHours(23, 59, 59, 999);
+        dateFilter.$lte = endDateObj;
+      }
+      userFilterQuery.createdAt = dateFilter;
+      partnerFilterQuery.createdAt = dateFilter;
+    }
+
+    // Sort configuration
+    const sortConfig = {};
+    sortConfig[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+    console.log('🔍 User Filter Query:', JSON.stringify(userFilterQuery, null, 2));
+    console.log('🔍 Partner Filter Query:', JSON.stringify(partnerFilterQuery, null, 2));
+    console.log('🔍 Sort Config:', sortConfig);
+
+    let userOrders = [];
+    let partnerOrders = [];
+    let totalUserOrders = 0;
+    let totalPartnerOrders = 0;
+
+    // Fetch user orders if orderType is not 'partner'
+    if (orderType !== 'partner') {
+      userOrders = await UserOrder.find(userFilterQuery)
+        .populate('orderDetails.itemId', 'name MRP discountedPrice image')
+        .populate('shippingAddressId', 'addressDetail')
+        .populate('userId', 'name phoneNumber email')
+        .sort(sortConfig)
+        .skip(skip)
+        .limit(limitNum)
+        .lean();
+
+      totalUserOrders = await UserOrder.countDocuments(userFilterQuery);
+    }
+
+    // Fetch partner orders if orderType is not 'user'
+    if (orderType !== 'user') {
+      partnerOrders = await PartnerOrder.find(partnerFilterQuery)
+        .populate('orderProductDetails.itemId', 'name MRP discountedPrice image')
+        .populate('shippingAddressId', 'addressDetail')
+        .populate('partnerId', 'name phoneNumber email')
+        .sort(sortConfig)
+        .skip(skip)
+        .limit(limitNum)
+        .lean();
+
+      totalPartnerOrders = await PartnerOrder.countDocuments(partnerFilterQuery);
+    }
+
+    const totalOrders = totalUserOrders + totalPartnerOrders;
+    const totalPages = Math.ceil(totalOrders / limitNum);
+
+    const response = {
+      userOrders,
+      partnerOrders,
+      totalUserOrders,
+      totalPartnerOrders,
+      totalOrders,
+      pagination: {
+        currentPage: pageNum,
+        totalPages,
+        totalOrders,
+        hasNextPage: pageNum < totalPages,
+        hasPrevPage: pageNum > 1,
+        limit: limitNum,
+        startIndex: skip + 1,
+        endIndex: Math.min(skip + limitNum, totalOrders)
+      },
+      filters: {
+        search,
+        status,
+        paymentMode,
+        paymentStatus,
+        orderType,
+        minAmount,
+        maxAmount,
+        startDate,
+        endDate,
+        sortBy,
+        sortOrder
+      }
+    };
+
+    console.log('✅ [GET ALL ORDERS] Success:', {
+      userOrders: userOrders.length,
+      partnerOrders: partnerOrders.length,
+      totalOrders,
+      currentPage: pageNum,
+      totalPages
+    });
+
+    return res.status(200).json(apiResponse(200, true, 'All orders retrieved successfully', response));
   } catch (error) {
     console.error('[GET ALL ORDERS] Error:', error);
     return res.status(500).json(apiResponse(500, false, 'An error occurred while fetching all orders', { error: error.message }));
@@ -406,6 +576,89 @@ exports.filterOrdersByPaymentMode = async (req, res) => {
   } catch (error) {
     console.error('[FILTER ORDERS BY PAYMENT MODE] Error:', error);
     return res.status(500).json(apiResponse(500, false, 'An error occurred while filtering orders by payment mode', { error: error.message }));
+  }
+};
+
+// Get order statistics and filter options
+exports.getOrderStats = async (req, res) => {
+  console.log('[GET ORDER STATS] Request received');
+  try {
+    // Get total counts
+    const totalUserOrders = await UserOrder.countDocuments({});
+    const totalPartnerOrders = await PartnerOrder.countDocuments({});
+    const totalOrders = totalUserOrders + totalPartnerOrders;
+
+    // Get status counts
+    const userStatusCounts = await UserOrder.aggregate([
+      { $group: { _id: '$orderStatus', count: { $sum: 1 } } }
+    ]);
+    const partnerStatusCounts = await PartnerOrder.aggregate([
+      { $group: { _id: '$orderStatus', count: { $sum: 1 } } }
+    ]);
+
+    // Get payment mode counts
+    const userPaymentCounts = await UserOrder.aggregate([
+      { $group: { _id: '$paymentMethod', count: { $sum: 1 } } }
+    ]);
+    const partnerPaymentCounts = await PartnerOrder.aggregate([
+      { $group: { _id: '$isOnlinePayment', count: { $sum: 1 } } }
+    ]);
+
+    // Get payment status counts
+    const userPaymentStatusCounts = await UserOrder.aggregate([
+      { $group: { _id: '$paymentStatus', count: { $sum: 1 } } }
+    ]);
+    const partnerPaymentStatusCounts = await PartnerOrder.aggregate([
+      { $group: { _id: '$paymentStatus', count: { $sum: 1 } } }
+    ]);
+
+    // Get amount ranges
+    const userAmountStats = await UserOrder.aggregate([
+      { $group: { _id: null, min: { $min: '$totalAmount' }, max: { $max: '$totalAmount' }, avg: { $avg: '$totalAmount' } } }
+    ]);
+    const partnerAmountStats = await PartnerOrder.aggregate([
+      { $group: { _id: null, min: { $min: '$totalAmount' }, max: { $max: '$totalAmount' }, avg: { $avg: '$totalAmount' } } }
+    ]);
+
+    // Get date ranges
+    const userDateStats = await UserOrder.aggregate([
+      { $group: { _id: null, earliest: { $min: '$createdAt' }, latest: { $max: '$createdAt' } } }
+    ]);
+    const partnerDateStats = await PartnerOrder.aggregate([
+      { $group: { _id: null, earliest: { $min: '$createdAt' }, latest: { $max: '$createdAt' } } }
+    ]);
+
+    const stats = {
+      totalOrders,
+      totalUserOrders,
+      totalPartnerOrders,
+      statusCounts: {
+        user: userStatusCounts,
+        partner: partnerStatusCounts
+      },
+      paymentModeCounts: {
+        user: userPaymentCounts,
+        partner: partnerPaymentCounts
+      },
+      paymentStatusCounts: {
+        user: userPaymentStatusCounts,
+        partner: partnerPaymentStatusCounts
+      },
+      amountRanges: {
+        user: userAmountStats[0] || { min: 0, max: 0, avg: 0 },
+        partner: partnerAmountStats[0] || { min: 0, max: 0, avg: 0 }
+      },
+      dateRanges: {
+        user: userDateStats[0] || { earliest: null, latest: null },
+        partner: partnerDateStats[0] || { earliest: null, latest: null }
+      }
+    };
+
+    console.log('✅ [GET ORDER STATS] Success:', stats);
+    return res.status(200).json(apiResponse(200, true, 'Order statistics retrieved successfully', stats));
+  } catch (error) {
+    console.error('[GET ORDER STATS] Error:', error);
+    return res.status(500).json(apiResponse(500, false, 'An error occurred while fetching order statistics', { error: error.message }));
   }
 };
 

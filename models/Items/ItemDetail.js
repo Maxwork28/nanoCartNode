@@ -53,9 +53,20 @@ const itemDetailSchema = new mongoose.Schema(
       type: String,
       default: "30-day return policy available.",
     },
+    // SEO & Search fields
+    metaTitle: { type: String, trim: true },
+    metaDescription: { type: String, trim: true },
+    searchKeywords: [{ type: String, trim: true }]
   },
   { timestamps: true }
 );
+
+// Add text index on SEO fields for full-text search
+itemDetailSchema.index({ 
+  metaTitle: "text", 
+  metaDescription: "text", 
+  searchKeywords: "text" 
+});
 
 itemDetailSchema.pre("save", function (next) {
   // Update isOutOfStock for each size in imagesByColor

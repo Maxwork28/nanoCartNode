@@ -7,9 +7,8 @@ const {
   deleteRatingReview,
   getRatingsAndReviewsByItemDetailId,
 } = require("../../controllers/partnerController/partnerRatingReviewController"); // Adjust path
-
-const { verifyToken } = require("../../middlewares/verifyToken"); // Adjust path
-const { isPartner } = require("../../middlewares/isPartner"); // Adjust path
+const { auditLogger } = require('../../middlewares/auditLogger');
+const { verifyToken, verifyTokenAndRole } = require("../../middlewares/verifyToken"); // Adjust path
 
 // Configure Multer for multiple file uploads
 const storage = multer.memoryStorage();
@@ -21,14 +20,13 @@ const upload = multer({
 // Create a review (Authenticated, supports multiple image uploads)
 router.post(
   "/create",
-  verifyToken,
-  isPartner,
+  ...verifyTokenAndRole(['Partner']),
   upload.array("customerProductImage", 5), // Match schema field, max 5 images
   createRatingReview
 );
 
 // Delete a review (Authenticated)
-router.delete("/:reviewId", verifyToken, isPartner, deleteRatingReview);
+router.delete("/:reviewId", ...verifyTokenAndRole(['Partner']), deleteRatingReview);
 
 // Get all reviews and ratings And Customer pic of patricular itemDetailId
 router.get("/:itemDetailId", getRatingsAndReviewsByItemDetailId);

@@ -8,9 +8,8 @@ const {
   getAllBanners,
   getBannerById,
 } = require("../../controllers/homePageBannerController/homePageBanner");
-const {isAdmin } = require("../../middlewares/isAdmin");
-const {verifyToken}=require("../../middlewares/verifyToken")
-
+const { verifyTokenAndRole } = require("../../middlewares/verifyToken");
+const { auditLogger } = require('../../middlewares/auditLogger');
 // Multer configuration
 const storage = multer.memoryStorage();
 const upload = multer({
@@ -29,9 +28,9 @@ const upload = multer({
 });
 
 // Routes
-router.post("/upload",verifyToken,isAdmin, upload.single("bannerImage"), uploadBanner);
-router.delete("/:id",verifyToken,isAdmin, deleteBanner);
-router.put("/:id", verifyToken,isAdmin,upload.single("bannerImage"), updateBanner);
+router.post("/upload", ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), upload.single("bannerImage"), uploadBanner);
+router.delete("/:id", ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), deleteBanner);
+router.put("/:id", ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), upload.single("bannerImage"), updateBanner);
 router.get("/", getAllBanners);
 router.get("/:id", getBannerById);
 

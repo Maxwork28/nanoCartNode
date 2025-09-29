@@ -19,7 +19,7 @@ const UserSchema = new mongoose.Schema({
   },
   role:{
     type:String,
-    enum:["Admin","User","Partner"],
+    enum:["Admin","SubAdmin","User","Partner"],
     default: "User",
   },
   isPhoneVerified: {
@@ -54,6 +54,29 @@ const UserSchema = new mongoose.Schema({
     type: String,
     unique: true,
     sparse: true, // Allows multiple null values
+  },
+  // SubAdmin specific fields
+  assignedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: function() {
+      return this.role === "SubAdmin";
+    }
+  },
+  permissions: {
+    type: [String],
+    default: function() {
+      if (this.role === "SubAdmin") {
+        return ["read", "create", "update", "delete"]; // Default permissions
+      }
+      return [];
+    }
+  },
+  isSubAdminActive: {
+    type: Boolean,
+    default: function() {
+      return this.role === "SubAdmin" ? true : undefined;
+    }
   },
 }, { timestamps: true });
 

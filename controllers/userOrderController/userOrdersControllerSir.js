@@ -55,7 +55,7 @@ const validateAndUpdateStock = async (orderDetails, session, requestId) => {
       throw new Error("Valid skuId is required");
     }
 
-    const itemDetail = await ItemDetail.findOne({ itemId: orderItem.itemId }).session(session);
+    const itemDetail = await ItemDetail.findOne({ itemId: orderItem.itemId }, null, session ? { session } : {});
     if (!itemDetail) {
       throw new Error(`Item detail for itemId ${orderItem.itemId} not found`);
     }
@@ -93,7 +93,7 @@ const validateAndUpdateStock = async (orderDetails, session, requestId) => {
           { "color.color": orderItem.color },
           { "size.size": orderItem.size, "size.skuId": orderItem.skuId },
         ],
-        session,
+        ...(session ? { session } : {}),
       }
     );
     console.log(`Stock updated for itemId ${orderItem.itemId}, skuId ${orderItem.skuId}`, requestId);
@@ -234,8 +234,31 @@ const populateOrderDetails = async (orders, userId) => {
 
 
 exports.createUserOrder = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  console.log("🚀 NEW CODE: createUserOrder function called with conditional transaction support");
+  // For development: Skip transactions if not in replica set
+  let session = null;
+  let useTransactions = false;
+  
+  try {
+    session = await mongoose.startSession();
+    await session.startTransaction();
+    // Test if the session actually works by doing a simple query
+    await UserAddress.findOne({}, null, { session }).limit(1);
+    useTransactions = true;
+    console.log("Using MongoDB transactions");
+  } catch (error) {
+    console.log("MongoDB transactions not available, proceeding without transactions:", error.message);
+    useTransactions = false;
+    if (session) {
+      try {
+        await session.endSession();
+      } catch (e) {
+        // Ignore cleanup errors
+      }
+    }
+    session = null;
+  }
+  
   const requestId = randomUUID();
 
   try {
@@ -248,38 +271,48 @@ exports.createUserOrder = async (req, res) => {
     // Validate userId
     if (!mongoose.isValidObjectId(userId)) {
       console.log("Invalid userId", userId, requestId);
-      await session.abortTransaction();
-      session.endSession();
+      if (useTransactions) {
+        await session.abortTransaction();
+        session.endSession();
+      }
       return res.status(400).json(apiResponse(400, false, "Invalid userId"));
     }
 
     // Validate orderDetails
     if (!orderDetails || !Array.isArray(orderDetails) || orderDetails.length === 0) {
       console.log("Invalid orderDetails", orderDetails, requestId);
-      await session.abortTransaction();
-      session.endSession();
+      if (useTransactions) {
+        await session.abortTransaction();
+        session.endSession();
+      }
       return res.status(400).json(apiResponse(400, false, "orderDetails array is required and cannot be empty"));
     }
 
     // Validate invoice
     if (!Array.isArray(invoice) || invoice.length === 0) {
       console.log("Invalid invoice", invoice, requestId);
-      await session.abortTransaction();
-      session.endSession();
+      if (useTransactions) {
+        await session.abortTransaction();
+        session.endSession();
+      }
       return res.status(400).json(apiResponse(400, false, "Non-empty invoice array is required"));
     }
 
     for (const entry of invoice) {
       if (!entry.key || typeof entry.key !== "string" || entry.key.trim() === "") {
         console.log(`Invalid invoice key: ${entry.key || "undefined"}`, requestId);
-        await session.abortTransaction();
-        session.endSession();
+        if (useTransactions) {
+          await session.abortTransaction();
+          session.endSession();
+        }
         return res.status(400).json(apiResponse(400, false, `Invalid invoice key: ${entry.key || "undefined"}`));
       }
       if (typeof entry.value !== "number" || isNaN(entry.value)) {
         console.log(`Invalid invoice value for key "${entry.key}": ${entry.value}`, requestId);
-        await session.abortTransaction();
-        session.endSession();
+        if (useTransactions) {
+          await session.abortTransaction();
+          session.endSession();
+        }
         return res.status(400).json(apiResponse(400, false, `Invalid invoice value for key "${entry.key}": ${entry.value}`));
       }
     }
@@ -287,52 +320,88 @@ exports.createUserOrder = async (req, res) => {
     // Validate totalAmount
     if (typeof totalAmount !== "number" || totalAmount <= 0) {
       console.log("Invalid totalAmount", totalAmount, requestId);
-      await session.abortTransaction();
-      session.endSession();
+      if (useTransactions) {
+        await session.abortTransaction();
+        session.endSession();
+      }
       return res.status(400).json(apiResponse(400, false, "Valid totalAmount is required and must be positive"));
     }
 
     // Validate paymentMethod
     if (!paymentMethod || !["Online", "COD"].includes(paymentMethod)) {
       console.log("Invalid payment method", paymentMethod, requestId);
-      await session.abortTransaction();
-      session.endSession();
+      if (useTransactions) {
+        await session.abortTransaction();
+        session.endSession();
+      }
       return res.status(400).json(apiResponse(400, false, "Valid payment method (Online or COD) is required"));
     }
 
     // Validate shippingAddressId
     if (!shippingAddressId) {
       console.log("Missing shippingAddressId", requestId);
-      await session.abortTransaction();
-      session.endSession();
+      if (useTransactions) {
+        await session.abortTransaction();
+        session.endSession();
+      }
       return res.status(400).json(apiResponse(400, false, "shippingAddressId is required"));
     }
 
     if (!mongoose.isValidObjectId(shippingAddressId)) {
       console.log("Invalid shippingAddressId", shippingAddressId, requestId);
-      await session.abortTransaction();
-      session.endSession();
+      if (useTransactions) {
+        await session.abortTransaction();
+        session.endSession();
+      }
       return res.status(400).json(apiResponse(400, false, "Invalid shippingAddressId"));
     }
 
     // Check if shipping address exists
-    const addressExists = await UserAddress.findOne({
-      userId,
-      "addressDetail._id": shippingAddressId,
-    }).session(session);
+    console.log("🔍 About to query shipping address with session:", useTransactions, requestId);
+    let addressExists;
+    try {
+      addressExists = await UserAddress.findOne({
+        userId,
+        "addressDetail._id": shippingAddressId,
+      }, null, useTransactions ? { session } : {});
+    } catch (error) {
+      if (error.message.includes("Transaction numbers are only allowed")) {
+        console.log("🔄 Transaction failed during query, falling back to non-transaction mode");
+        useTransactions = false;
+        if (session) {
+          try {
+            await session.endSession();
+          } catch (e) {
+            // Ignore cleanup errors
+          }
+        }
+        session = null;
+        addressExists = await UserAddress.findOne({
+          userId,
+          "addressDetail._id": shippingAddressId,
+        });
+      } else {
+        throw error;
+      }
+    }
     console.log("Shipping address found:", !!addressExists, requestId);
     if (!addressExists) {
-      await session.abortTransaction();
-      session.endSession();
+      if (useTransactions) {
+        await session.abortTransaction();
+        session.endSession();
+      }
       return res.status(404).json(apiResponse(404, false, "Shipping address not found"));
     }
 
     // Fetch user cart
-    const userCart = await UserCart.findOne({ userId }).session(session);
+    console.log("🔍 About to query user cart with session:", useTransactions, requestId);
+    const userCart = await UserCart.findOne({ userId }, null, useTransactions ? { session } : {});
     console.log("User cart found:", !!userCart, requestId);
     if (!userCart) {
-      await session.abortTransaction();
-      session.endSession();
+      if (useTransactions) {
+        await session.abortTransaction();
+        session.endSession();
+      }
       return res.status(404).json(apiResponse(404, false, "User cart not found"));
     }
 
@@ -349,8 +418,10 @@ exports.createUserOrder = async (req, res) => {
 
       if (!cartItem) {
         console.log(`Order item not found in cart or insufficient quantity: ${JSON.stringify(orderItem)}`, requestId);
-        await session.abortTransaction();
-        session.endSession();
+        if (useTransactions) {
+          await session.abortTransaction();
+          session.endSession();
+        }
         return res.status(400).json(apiResponse(400, false, `Order item not found in cart or insufficient quantity: itemId ${orderItem.itemId}`));
       }
     }
@@ -406,12 +477,14 @@ exports.createUserOrder = async (req, res) => {
     }
 
     // Save order
+    console.log("🔍 About to save order with session:", useTransactions, requestId);
     const newOrder = new UserOrder(orderData);
-    const savedOrder = await newOrder.save({ session });
+    const savedOrder = await newOrder.save(useTransactions ? { session } : {});
     console.log("Order saved to DB", requestId);
 
     // Update stock after order creation
-    await validateAndUpdateStock(orderDetails, session, requestId);
+    console.log("🔍 About to update stock with session:", useTransactions, requestId);
+    await validateAndUpdateStock(orderDetails, useTransactions ? session : null, requestId);
     console.log("Stock updated after order creation", requestId);
 
     // Update cart: Remove ordered items
@@ -425,12 +498,15 @@ exports.createUserOrder = async (req, res) => {
             orderItem.skuId === cartItem.skuId
         )
     );
-    await userCart.save({ session });
+    console.log("🔍 About to save cart with session:", useTransactions, requestId);
+    await userCart.save(useTransactions ? { session } : {});
     console.log("User cart updated after placing order", requestId);
 
     // Commit transaction
-    await session.commitTransaction();
-    session.endSession();
+    if (useTransactions) {
+      await session.commitTransaction();
+      session.endSession();
+    }
 
     // Populate order details
     const populatedOrder = await populateOrderDetails(savedOrder, userId);
@@ -438,8 +514,10 @@ exports.createUserOrder = async (req, res) => {
     return res.status(201).json(apiResponse(201, true, "Order created successfully", populatedOrder));
   } catch (error) {
     console.error("Exception occurred:", error.message, requestId);
-    await session.abortTransaction();
-    session.endSession();
+    if (useTransactions && session) {
+      await session.abortTransaction();
+      session.endSession();
+    }
     return res.status(400).json(apiResponse(400, false, error.message || "Error while creating order"));
   }
 };

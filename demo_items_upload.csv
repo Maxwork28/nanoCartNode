@@ -1,3 +1,0 @@
-name,description,MRP,totalStock,discountedPrice,defaultColor,isItemDetail,categoryName,subCategoryName,itemImageId,filters,userAverageRating
-iPhone 15 Pro,Latest iPhone with titanium design and A17 Pro chip,129999,75,119999,Natural Titanium,true,Electronics,Smartphones,iphone15pro_001,Brand:Apple|Type:Smartphone|Storage:256GB,4.8
-MacBook Air M2,Ultra-thin laptop with M2 chip and all-day battery,114999,50,104999,Space Gray,true,Electronics,Laptops,mbair_m2_001,Brand:Apple|Type:Laptop|Processor:M2,4.9

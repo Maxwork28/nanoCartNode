@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { verifyToken } = require('../../middlewares/verifyToken.js');
-const { isAdmin } = require('../../middlewares/isAdmin.js');
+const { auditLogger } = require('../../middlewares/auditLogger');
+
+const { verifyTokenAndRole } = require('../../middlewares/verifyToken.js');
 const {
   getUserOrderDetails,
   getAllOrders,
@@ -31,67 +32,66 @@ const {
   getAllReturnedOrdersPartner,
   getAllDispatchedOrdersPartner,
   getAllUserOrders,
-  getAllPartnerOrders
+  getAllPartnerOrders,
+  getOrderStats
 } = require('../../controllers/adminSideController/adminOrderController.js');
 
-// Route to get user order details
-router.get('/users/:userId/orders', verifyToken, isAdmin, getUserOrderDetails);
+// Route to get user order details (Admin and SubAdmin can access)
+router.get('/users/:userId/orders', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), getUserOrderDetails);
 
-// Route to get all orders (user and partner)
-router.get('/orders/all', verifyToken, isAdmin, getAllOrders);
+// Route to get all orders (user and partner) with enhanced filtering (Admin and SubAdmin can access)
+router.get('/orders/all', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), getAllOrders);
 
-// Route to get all user orders
-router.get('/user-orders', verifyToken, isAdmin,getAllUserOrders);
+// Route to get order statistics and filter options (Admin and SubAdmin can access)
+router.get('/orders/stats', ...verifyTokenAndRole(['Admin', 'SubAdmin']), getOrderStats);
 
-// Route to get all partner orders
-router.get('/partner-orders', verifyToken, isAdmin,getAllPartnerOrders);
+// Route to get all user orders (Admin and SubAdmin can access)
+router.get('/user-orders', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), getAllUserOrders);
 
-// Route to filter orders by status
-router.get('/orders/filter/status', verifyToken, isAdmin, filterOrdersByStatus);
+// Route to get all partner orders (Admin and SubAdmin can access)
+router.get('/partner-orders', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), getAllPartnerOrders);
 
-// Route to filter orders by payment mode
-router.get('/orders/filter/payment-mode', verifyToken, isAdmin, filterOrdersByPaymentMode);
+// Route to filter orders by status (Admin and SubAdmin can access)
+router.get('/orders/filter/status', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), filterOrdersByStatus);
 
-// Route to get total revenue
-router.get('/revenue/total', verifyToken, isAdmin, getTotalRevenue);
+// Route to filter orders by payment mode (Admin and SubAdmin can access)
+router.get('/orders/filter/payment-mode', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), filterOrdersByPaymentMode);
 
-// Route to get total revenue
-router.get('/revenue/total/filter', verifyToken, isAdmin, getFilteredTotalRevenue);
+// Route to get total revenue (Admin and SubAdmin can access)
+router.get('/revenue/total', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), getTotalRevenue);
 
-// Route to get items by ordered number
-router.get('/items/ordered', verifyToken, isAdmin, getItemsByOrderedNumber);
+// Route to get total revenue (Admin and SubAdmin can access)
+router.get('/revenue/total/filter', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), getFilteredTotalRevenue);
 
-// Route to get partner order details
-router.get('/partner/:partnerId/orders', verifyToken, isAdmin, getPartnerOrderDetails);
+// Route to get items by ordered number (Admin and SubAdmin can access)
+router.get('/items/ordered', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), getItemsByOrderedNumber);
 
-// Suggested routes for additional controller functions
-router.get('/orders/total', verifyToken, isAdmin, getTotalUserOrdersCount);
-router.get('/orders/total/partner', verifyToken, isAdmin, getTotalPartnerOrdersCount);
-router.get('/orders/confirmed/total', verifyToken, isAdmin, getTotalConfirmedUserOrdersCount);
-router.get('/orders/confirmed/total/partner', verifyToken, isAdmin, getTotalConfirmedPartnerOrdersCount);
-router.get('/orders/pending/total', verifyToken, isAdmin, getTotalPendingUserOrdersCount);
-router.get('/orders/pending/total/partner', verifyToken, isAdmin, getTotalPendingPartnerOrdersCount);
-router.get('/orders/cancelled/total', verifyToken, isAdmin, getTotalCancelledUserOrdersCount);
-router.get('/orders/returned/total', verifyToken, isAdmin, getTotalReturnedUserOrdersCount);
-router.get('/orders/returned/total/partner', verifyToken, isAdmin, getTotalReturnedPartnerOrdersCount);
-router.get('/orders/exchanged/total', verifyToken, isAdmin, getTotalExchangedUserOrdersCount);
-router.get('/orders/dispatched/total', verifyToken, isAdmin, getTotalDispatchedUserOrdersCount);
+// Route to get partner order details (Admin and SubAdmin can access)
+router.get('/partner/:partnerId/orders', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), getPartnerOrderDetails);
 
+// Suggested routes for additional controller functions (Admin and SubAdmin can access)
+router.get('/orders/total', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), getTotalUserOrdersCount);
+router.get('/orders/total/partner', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), getTotalPartnerOrdersCount);
+router.get('/orders/confirmed/total', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), getTotalConfirmedUserOrdersCount);
+router.get('/orders/confirmed/total/partner', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), getTotalConfirmedPartnerOrdersCount);
+router.get('/orders/pending/total', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), getTotalPendingUserOrdersCount);
+router.get('/orders/pending/total/partner', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), getTotalPendingPartnerOrdersCount);
+router.get('/orders/cancelled/total', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), getTotalCancelledUserOrdersCount);
+router.get('/orders/returned/total', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), getTotalReturnedUserOrdersCount);
+router.get('/orders/returned/total/partner', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), getTotalReturnedPartnerOrdersCount);
+router.get('/orders/exchanged/total', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), getTotalExchangedUserOrdersCount);
+router.get('/orders/dispatched/total', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), getTotalDispatchedUserOrdersCount);
 
+// Order status routes (Admin and SubAdmin can access)
+router.get('/orders/pending', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), getAllPendingOrdersUser);
+router.get('/orders/cancelled', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), getAllCancelledOrdersUser);
+router.get('/orders/returned', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), getAllReturnedOrdersUser);
+router.get('/orders/exchanged', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), getAllExchangedOrdersUser);
+router.get('/orders/dispatched', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), getAllDispatchedOrdersUser);
 
-router.get('/orders/pending', verifyToken, isAdmin, getAllPendingOrdersUser);
-router.get('/orders/cancelled', verifyToken, isAdmin, getAllCancelledOrdersUser);
-router.get('/orders/returned', verifyToken, isAdmin, getAllReturnedOrdersUser);
-router.get('/orders/exchanged', verifyToken, isAdmin, getAllExchangedOrdersUser);
-router.get('/orders/dispatched', verifyToken, isAdmin, getAllDispatchedOrdersUser);
-
-// Route to get all pending orders
-router.get("/orders/pending/partner", getAllPendingOrdersPartner);
-
-// Route to get all returned orders
-router.get("/orders/returned/partner", getAllReturnedOrdersPartner);
-
-// Route to get all dispatched orders
-router.get("/orders/dispatched/partner", getAllDispatchedOrdersPartner);
+// Partner order status routes (Admin and SubAdmin can access)
+router.get("/orders/pending/partner", ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), getAllPendingOrdersPartner);
+router.get("/orders/returned/partner", ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), getAllReturnedOrdersPartner);
+router.get("/orders/dispatched/partner", ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(),     getAllDispatchedOrdersPartner);
 
 module.exports = router;

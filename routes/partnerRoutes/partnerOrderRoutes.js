@@ -1,9 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
-const { verifyToken } = require("../../middlewares/verifyToken");
-const { isPartner } = require("../../middlewares/isPartner");
-const { isAdmin } = require("../../middlewares/isAdmin");
+const { verifyToken, verifyTokenAndRole } = require("../../middlewares/verifyToken");
+const { auditLogger } = require('../../middlewares/auditLogger');
 const {
   createPartnerOrder,
   returnAndRefund,
@@ -22,32 +21,30 @@ const upload = multer({ storage });
 // Create a new order (with cheque image upload)
 router.post(
   "/create",
-  verifyToken,
-  isPartner,
+  ...verifyTokenAndRole(['Partner']),
   upload.single("chequeImageFile"),
   createPartnerOrder
 );
 
 // Fetch all orders for a partner
-router.get("/", verifyToken, isPartner, fetchAllPartnerOrders);
+router.get("/", ...verifyTokenAndRole(['Partner']), fetchAllPartnerOrders);
 
 // Fetch a specific order by orderId
-router.get("/:orderId", verifyToken, isPartner, fetchPartnerOrderByOrderId);
+router.get("/:orderId", ...verifyTokenAndRole(['Partner']), fetchPartnerOrderByOrderId);
 
 // Request return and refund
-router.post("/return-refund", verifyToken, isPartner, returnAndRefund);
+router.post("/return-refund", ...verifyTokenAndRole(['Partner']), returnAndRefund);
 
-// Credit refund amount to wallet
-router.post("/credit-refund", verifyToken, isAdmin, creditRefundToWallet);
+// Credit refund amount to wallet (Admin and SubAdmin can access)
+router.post("/credit-refund", ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), creditRefundToWallet);
 
+// Update order status (Admin and SubAdmin can access)
+router.put("/status", ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), updateOrderStatus);
 
-// Update order status
-router.put("/status", verifyToken, isAdmin, updateOrderStatus);
+// Update payment status (Admin and SubAdmin can access)
+router.put("/payment-status", ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), updatePaymentStatus);
 
-// Update payment status
-router.put("/payment-status", verifyToken, isAdmin, updatePaymentStatus);
-
-// Update delivery date
-router.put("/delivery-date", verifyToken, isAdmin, updateDeliveryDate);
+// Update delivery date (Admin and SubAdmin can access)
+router.put("/delivery-date", ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), updateDeliveryDate);
 
 module.exports = router;

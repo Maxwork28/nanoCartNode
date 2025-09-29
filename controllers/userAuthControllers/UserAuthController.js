@@ -9,9 +9,76 @@ const UserTBYB = require("../../models/User/UserTBYB");
 const UserWishlist = require("../../models/User/UserWishlist");
 const { apiResponse } = require("../../utils/apiResponse");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const admin = require("firebase-admin");
 const PhoneOTP = require("../../models/OTP/PhoneOTP.js");
+const RefreshToken = require("../../models/Auth/RefreshToken");
 const msg91Service = require("../../utils/msg91Service");
+
+// Helper function to generate access token
+const generateAccessToken = (payload) => {
+  return jwt.sign(payload, process.env.JWT_SECRET, {
+    expiresIn: "2m", // Short-lived access token (2 minutes) - FOR TESTING
+  });
+};
+
+// Helper function to generate refresh token
+const generateRefreshToken = () => {
+  return crypto.randomBytes(64).toString('hex');
+};
+
+// Helper function to create token pair (access + refresh)
+const createTokenPair = async (user, role) => {
+  let payload;
+  
+  if (role === "Admin") {
+    payload = {
+      adminId: user._id,
+      adminPhoneNumber: user.phoneNumber,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    };
+  } else if (role === "SubAdmin") {
+    payload = {
+      subAdminId: user._id,
+      subAdminPhoneNumber: user.phoneNumber,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      permissions: user.permissions || []
+    };
+  } else if (role === "Partner") {
+    payload = {
+      partnerId: user._id,
+      partnerPhoneNumber: user.phoneNumber,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    };
+  } else {
+    payload = {
+      userId: user._id,
+      phoneNumber: user.phoneNumber,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      isActive: user.isActive,
+    };
+  }
+
+  const accessToken = generateAccessToken(payload);
+  const refreshTokenValue = generateRefreshToken();
+
+  // Store refresh token in database
+  await RefreshToken.create({
+    userId: user._id,
+    token: refreshTokenValue,
+    role: user.role
+  });
+
+  return { accessToken, refreshToken: refreshTokenValue };
+};
 
 exports.signup = async (req, res) => {
   console.log('=== SIGNUP FUNCTION CALLED ===');
@@ -163,26 +230,46 @@ exports.login = async (req, res) => {
     console.log('🔄 Processing login flow for role:', user.role);
     if (user.role === "Admin") {
       console.log('👑 Processing Admin login flow...');
-      const adminPayload = {
-        adminId: user._id,
-        adminPhoneNumber: user.phoneNumber,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-      };
-      console.log('Admin payload created:', adminPayload);
       
-      token = jwt.sign(adminPayload, process.env.JWT_SECRET, {
-        expiresIn: "24h",
-      });
-      console.log('✅ JWT token generated for admin');
-      console.log('Token length:', token.length);
+      const { accessToken, refreshToken } = await createTokenPair(user, user.role);
+      console.log('✅ Token pair generated for admin');
       
-      res.setHeader("Authorization", `Bearer ${token}`);
+      res.setHeader("Authorization", `Bearer ${accessToken}`);
       console.log('🚀 Admin login successful, returning response');
       return res
         .status(200)
-        .json(apiResponse(200, true, "Admin logged in successfully", { token, role: user.role }));
+        .json(apiResponse(200, true, "Admin logged in successfully", { 
+          accessToken, 
+          refreshToken,
+          role: user.role 
+        }));
+    }
+
+    // SubAdmin Flow
+    if (user.role === "SubAdmin") {
+      console.log('👨‍💼 Processing SubAdmin login flow...');
+      
+      // Check if subadmin is active
+      if (!user.isSubAdminActive) {
+        console.log('❌ SubAdmin account is deactivated');
+        return res
+          .status(403)
+          .json(apiResponse(403, false, "SubAdmin account is deactivated"));
+      }
+      
+      const { accessToken, refreshToken } = await createTokenPair(user, user.role);
+      console.log('✅ Token pair generated for subadmin');
+      
+      res.setHeader("Authorization", `Bearer ${accessToken}`);
+      console.log('🚀 SubAdmin login successful, returning response');
+      return res
+        .status(200)
+        .json(apiResponse(200, true, "SubAdmin logged in successfully", { 
+          accessToken, 
+          refreshToken,
+          role: user.role,
+          permissions: user.permissions || []
+        }));
     }
 
     // Partner Flow
@@ -771,6 +858,37 @@ exports.loginWithOTP = async (req, res) => {
         .json(apiResponse(200, true, "Admin logged in successfully", { token,role:user.role }));
     }
 
+    // SubAdmin Flow:
+    if (user.role === "SubAdmin") {
+      // Check if subadmin is active
+      if (!user.isSubAdminActive) {
+        return res
+          .status(403)
+          .json(apiResponse(403, false, "SubAdmin account is deactivated"));
+      }
+
+      const subAdminPayload = {
+        subAdminId: user._id,
+        subAdminPhoneNumber: user.phoneNumber,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        permissions: user.permissions || []
+      };
+
+      token = jwt.sign(subAdminPayload, process.env.JWT_SECRET, {
+        expiresIn: "24h",
+      });
+      res.setHeader("Authorization", `Bearer ${token}`);
+      return res
+        .status(200)
+        .json(apiResponse(200, true, "SubAdmin logged in successfully", { 
+          token, 
+          role: user.role,
+          permissions: user.permissions || []
+        }));
+    }
+
     // Partner Flow:
     if (user.isPartner === true && user.isActive === false) {
       const partner = await Partner.findOne({ phoneNumber: phoneNumber });
@@ -862,5 +980,82 @@ exports.loginWithOTP = async (req, res) => {
     console.error("❌ LOGIN WITH OTP ERROR:", error.message);
     console.error("Error stack:", error.stack);
     return res.status(500).json(apiResponse(500, false, error.message));
+  }
+};
+
+// Refresh token endpoint
+exports.refreshToken = async (req, res) => {
+  console.log('=== REFRESH TOKEN FUNCTION CALLED ===');
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(400).json(apiResponse(400, false, "Refresh token is required"));
+    }
+
+    // Find the refresh token in database
+    const storedToken = await RefreshToken.findOne({ 
+      token: refreshToken,
+      isActive: true 
+    }).populate('userId');
+
+    if (!storedToken) {
+      return res.status(401).json(apiResponse(401, false, "Invalid refresh token"));
+    }
+
+    // Check if refresh token is expired
+    if (!storedToken.isValid()) {
+      await RefreshToken.findByIdAndUpdate(storedToken._id, { isActive: false });
+      return res.status(401).json(apiResponse(401, false, "Refresh token has expired"));
+    }
+
+    // Check if user still exists and is active
+    const user = storedToken.userId;
+    if (!user || !user.isActive) {
+      await RefreshToken.findByIdAndUpdate(storedToken._id, { isActive: false });
+      return res.status(401).json(apiResponse(401, false, "User account is inactive"));
+    }
+
+    // Generate new token pair
+    const { accessToken, refreshToken: newRefreshToken } = await createTokenPair(user, user.role);
+
+    // Deactivate old refresh token
+    await RefreshToken.findByIdAndUpdate(storedToken._id, { 
+      isActive: false,
+      lastUsed: new Date()
+    });
+
+    res.setHeader("Authorization", `Bearer ${accessToken}`);
+    
+    return res.status(200).json(apiResponse(200, true, "Tokens refreshed successfully", {
+      accessToken,
+      refreshToken: newRefreshToken,
+      role: user.role
+    }));
+
+  } catch (error) {
+    console.error("❌ REFRESH TOKEN ERROR:", error.message);
+    return res.status(500).json(apiResponse(500, false, "Internal server error"));
+  }
+};
+
+// Logout endpoint to invalidate refresh token
+exports.logout = async (req, res) => {
+  console.log('=== LOGOUT FUNCTION CALLED ===');
+  try {
+    const { refreshToken } = req.body;
+
+    if (refreshToken) {
+      // Deactivate the refresh token
+      await RefreshToken.findOneAndUpdate(
+        { token: refreshToken },
+        { isActive: false }
+      );
+    }
+
+    return res.status(200).json(apiResponse(200, true, "Logged out successfully"));
+  } catch (error) {
+    console.error("❌ LOGOUT ERROR:", error.message);
+    return res.status(500).json(apiResponse(500, false, "Internal server error"));
   }
 };

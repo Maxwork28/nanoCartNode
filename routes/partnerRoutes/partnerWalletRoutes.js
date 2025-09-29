@@ -3,12 +3,11 @@ const router = express.Router();
 const {
   getWalletDetails,
 } = require("../../controllers/partnerController/partnerWalletController");
-const {verifyToken} = require("../../middlewares/verifyToken"); 
-const {isPartner} = require("../../middlewares/isPartner"); 
+const {verifyToken, verifyTokenAndRole} = require("../../middlewares/verifyToken"); 
 
 
 // Get partner's wallet details (INR)
-router.get("/", verifyToken,isPartner, getWalletDetails);
+router.get("/", ...verifyTokenAndRole(['Partner']), getWalletDetails);
 
 
 module.exports = router;

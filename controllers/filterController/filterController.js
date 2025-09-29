@@ -56,6 +56,101 @@ exports.getAllFilters = async (req, res) => {
   }
 };
 
+// Search Filters with pagination
+exports.searchFilters = async (req, res) => {
+  try {
+    const {
+      keyword = '',
+      page = 1,
+      limit = 10,
+      sortBy = 'createdAt',
+      sortOrder = 'desc'
+    } = req.query;
+
+    const pageNum = parseInt(page, 10);
+    const limitNum = parseInt(limit, 10);
+
+    if (pageNum < 1 || limitNum < 1) {
+      return res
+        .status(400)
+        .json(apiResponse(400, false, "Page and limit must be positive numbers"));
+    }
+    if (limitNum > 100) {
+      return res
+        .status(400)
+        .json(apiResponse(400, false, "Limit cannot exceed 100 items per page"));
+    }
+
+    const skip = (pageNum - 1) * limitNum;
+    let searchQuery = {};
+
+    if (keyword && keyword.trim()) {
+      const searchKeyword = keyword.trim();
+      const regex = new RegExp(searchKeyword, 'i');
+      searchQuery.$or = [
+        { key: { $regex: regex } },
+        { values: { $regex: regex } }
+      ];
+    }
+
+    const allowedSortFields = ['key', 'createdAt', 'updatedAt'];
+    const validSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
+    const validSortOrder = sortOrder === 'asc' ? 1 : -1;
+    const sortQuery = { [validSortBy]: validSortOrder };
+
+    const [filters, totalCount] = await Promise.all([
+      Filter.find(searchQuery)
+        .sort(sortQuery)
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      Filter.countDocuments(searchQuery)
+    ]);
+
+    const totalPages = Math.ceil(totalCount / limitNum);
+    const hasNextPage = pageNum < totalPages;
+    const hasPrevPage = pageNum > 1;
+
+    const responseData = {
+      filters,
+      pagination: {
+        currentPage: pageNum,
+        totalPages,
+        totalCount,
+        limit: limitNum,
+        hasNextPage,
+        hasPrevPage,
+        nextPage: hasNextPage ? pageNum + 1 : null,
+        prevPage: hasPrevPage ? pageNum - 1 : null
+      },
+      searchInfo: {
+        keyword: keyword || null,
+        sortBy: validSortBy,
+        sortOrder: sortOrder
+      }
+    };
+
+    return res
+      .status(200)
+      .json(
+        apiResponse(
+          200,
+          true,
+          keyword
+            ? `Found ${totalCount} filters matching "${keyword}"`
+            : `Retrieved ${totalCount} filters`,
+          responseData
+        )
+      );
+
+  } catch (error) {
+    console.error("Error searching filters:", error.message);
+    return res
+      .status(500)
+      .json(apiResponse(500, false, "Internal server error while searching filters"));
+  }
+};
+
 // Read Single Filter by ID
 exports.getFilterById = async (req, res) => {
   try {

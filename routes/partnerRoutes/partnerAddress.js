@@ -2,19 +2,18 @@ const express = require('express');
 const router = express.Router();
 const { createAddress, editAddress, deleteAddress,fetchAddress } = require("../../controllers/partnerController/partnerAddress");
 
-const {verifyToken}=require("../../middlewares/verifyToken")
-const {isPartner}=require("../../middlewares/isPartner")
+const {verifyToken, verifyTokenAndRole}=require("../../middlewares/verifyToken")
 
 // Create a new address
-router.post('/create', verifyToken,isPartner, createAddress);
+router.post('/create', ...verifyTokenAndRole(['Partner']), createAddress);
 
 // Edit an existing address
-router.put('/:addressId', verifyToken,isPartner, editAddress);
+router.put('/:addressId', ...verifyTokenAndRole(['Partner']), editAddress);
 
 // Delete an address
-router.delete('/:addressId', verifyToken,isPartner,deleteAddress);
+router.delete('/:addressId', ...verifyTokenAndRole(['Partner']), deleteAddress);
 
 //Fetch address details
-router.get('/', verifyToken,isPartner,fetchAddress);
+router.get('/', ...verifyTokenAndRole(['Partner']), fetchAddress);
 
 module.exports = router;

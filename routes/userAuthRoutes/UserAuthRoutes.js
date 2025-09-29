@@ -7,8 +7,7 @@
 
 const express = require("express");
 const router = express.Router();
-const { verifyToken } = require("../../middlewares/verifyToken");
-const { isUser } = require("../../middlewares/isUser");
+const { verifyToken, verifyTokenAndRole } = require("../../middlewares/verifyToken");
 
 // Import the required controllers
 const {
@@ -22,7 +21,9 @@ const {
   phoneOtpVerification,
   signupWithOTP,
   resendOTPVoice,
-  resendOTPText
+  resendOTPText,
+  refreshToken,
+  logout
 } = require("../../controllers/userAuthControllers/UserAuthController");
 
 // ========================================
@@ -64,6 +65,26 @@ router.post("/signup/otp", signupWithOTP);
  * @body    { phoneNumber, otp }
  */
 router.post("/login/otp", loginWithOTP);
+
+// ========================================
+// TOKEN MANAGEMENT ROUTES
+// ========================================
+
+/**
+ * @route   POST /auth/refresh
+ * @desc    Refresh access token using refresh token
+ * @access  Public
+ * @body    { refreshToken }
+ */
+router.post("/refresh", refreshToken);
+
+/**
+ * @route   POST /auth/logout
+ * @desc    Logout user and invalidate refresh token
+ * @access  Public
+ * @body    { refreshToken }
+ */
+router.post("/logout", logout);
 
 // ========================================
 // OTP MANAGEMENT ROUTES
@@ -110,7 +131,7 @@ router.post("/otp/resend/text", resendOTPText);
  * @desc    Get user profile
  * @access  Private (requires authentication)
  */
-router.get("/profile", verifyToken, isUser, getUserProfile);
+router.get("/profile", ...verifyTokenAndRole(['User']), getUserProfile);
 
 /**
  * @route   PUT /auth/profile
@@ -118,14 +139,14 @@ router.get("/profile", verifyToken, isUser, getUserProfile);
  * @access  Private (requires authentication)
  * @body    { name, email }
  */
-router.put("/profile", verifyToken, isUser, updateUserProfile);
+router.put("/profile", ...verifyTokenAndRole(['User']), updateUserProfile);
 
 /**
  * @route   DELETE /auth/
  * @desc    Delete user account
  * @access  Private (requires authentication)
  */
-router.delete("/", verifyToken, isUser, deleteUserAccount);
+router.delete("/", ...verifyTokenAndRole(['User']), deleteUserAccount);
 
 
 

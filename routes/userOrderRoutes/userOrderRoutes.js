@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { verifyToken } = require('../../middlewares/verifyToken');
-const { isUser } = require('../../middlewares/isUser');
-const { isAdmin } = require('../../middlewares/isAdmin');
+const { verifyToken, verifyTokenAndRole } = require('../../middlewares/verifyToken');
+const { auditLogger } = require('../../middlewares/auditLogger');
 const {
   createUserOrder,
   verifyPayment,
@@ -16,19 +15,18 @@ const {
 } = require('../../controllers/userOrderController/userOrdersControllerSir');
 
 // User Routes
-router.post('/create', verifyToken, isUser, createUserOrder);
-router.get("/:orderId",verifyToken,isUser,fetchOrderByOrderId);
-router.get('/', verifyToken, isUser, FetchOrderHistory);
+router.post('/create', ...verifyTokenAndRole(['User']), createUserOrder);
+router.get("/:orderId", ...verifyTokenAndRole(['User']), fetchOrderByOrderId);
+router.get('/', ...verifyTokenAndRole(['User']), FetchOrderHistory);
 
-
-router.post('/verify-payment', verifyToken, isUser, verifyPayment);
+router.post('/verify-payment', ...verifyTokenAndRole(['User']), verifyPayment);
 router.post('/phonepe/callback', handlePhonePeCallback);
 
-router.post('/cancel', verifyToken, isUser, cancelOrder);
-router.post('/return-refund', verifyToken, isUser, returnRefund);
-router.post('/return-exchange', verifyToken, isUser, returnAndExchange);
+router.post('/cancel', ...verifyTokenAndRole(['User']), cancelOrder);
+router.post('/return-refund', ...verifyTokenAndRole(['User']), returnRefund);
+router.post('/return-exchange', ...verifyTokenAndRole(['User']), returnAndExchange);
 
 
-router.get('/admin/:userId', verifyToken, isAdmin, FetchOrderHistoryByAdmin);
+router.get('/admin/:userId', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), FetchOrderHistoryByAdmin);
 
 module.exports = router;

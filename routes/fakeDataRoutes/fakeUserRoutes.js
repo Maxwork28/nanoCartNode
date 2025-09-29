@@ -1,21 +1,19 @@
 const express = require('express');
 const router = express.Router();
+const { generateFakeUsers, deleteFakeUsers, getAllFakeUsers, deleteOneFakeUser } = require("../../controllers/fakeDataController/fakeUserController");
+const { verifyTokenAndRole } = require("../../middlewares/verifyToken");
+const { auditLogger } = require('../../middlewares/auditLogger');
 
-const { generateFakeUsers,deleteFakeUsers,getAllFakeUsers,deleteOneFakeUser } = require("../../controllers/fakeDataController/fakeUserController"); // Adjust path if needed
-const {verifyToken}=require("../../middlewares/verifyToken");
-const {isAdmin}=require("../../middlewares/isAdmin")
+// Generate Fake User
+router.post('/generate', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), generateFakeUsers);
 
-
-//Generate Fake User
-router.post('/generate',verifyToken,isAdmin, generateFakeUsers);
-
-//Delete Fake USer
-router.delete("/",verifyToken,isAdmin,deleteFakeUsers)
+// Delete Fake User
+router.delete("/", ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), deleteFakeUsers);
 
 // Route to get all fake users
-router.get('/', verifyToken, isAdmin, getAllFakeUsers);
+router.get('/', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), getAllFakeUsers);
 
 // Route to delete a single fake user
-router.delete('/delete-one-fake-user', verifyToken, isAdmin, deleteOneFakeUser);
+router.delete('/delete-one-fake-user', ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), deleteOneFakeUser);
 
 module.exports = router;

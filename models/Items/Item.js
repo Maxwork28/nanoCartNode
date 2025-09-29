@@ -29,13 +29,23 @@ const itemSchema = new mongoose.Schema(
         value: { type: String },
       },
     ],
-    userAverageRating: { type: Number,default:0 }
+    userAverageRating: { type: Number,default:0 },
+    // SEO & Search fields
+    metaTitle: { type: String, trim: true },
+    metaDescription: { type: String, trim: true },
+    searchKeywords: [{ type: String, trim: true }]
   },
   { timestamps: true }
 );
 
-// Add text index on name and description fields for full-text search
-itemSchema.index({ name: "text", description: "text" });
+// Add text index on name, description, and SEO fields for full-text search
+itemSchema.index({ 
+  name: "text", 
+  description: "text", 
+  metaTitle: "text", 
+  metaDescription: "text", 
+  searchKeywords: "text" 
+});
 
 itemSchema.pre("save", function (next) {
   // Calculate discountPercentage if discountedPrice and MRP are provided
@@ -46,7 +56,14 @@ itemSchema.pre("save", function (next) {
   }
 
   // Set isOutOfStock based on totalStock
+  const wasOutOfStock = this.isOutOfStock;
   this.isOutOfStock = this.totalStock === 0;
+  
+  // Debug logging for stock changes
+  if (this.isModified('totalStock') || this.isModified('isOutOfStock')) {
+    console.log(`[ITEM PRE-SAVE] ${this.name}: totalStock=${this.totalStock}, isOutOfStock=${this.isOutOfStock} (was: ${wasOutOfStock})`);
+  }
+  
   next();
 });
 

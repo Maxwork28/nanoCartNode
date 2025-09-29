@@ -3,6 +3,7 @@ const Category = require("../../models/Category/Category");
 const SubCategory = require("../../models/SubCategory/SubCategory");
 const Item = require("../../models/Items/Item");
 const ItemDetail = require("../../models/Items/Item");
+const HomePageSection = require("../../models/HomePage/HomePageSection");
 const {
   uploadImageToS3,
   uploadMultipleImagesToS3,
@@ -25,14 +26,46 @@ const parseCSV = (csvContent) => {
       throw new Error('CSV must have at least a header row and one data row');
     }
 
-    const headers = lines[0].split(',').map(header => header.trim());
+    // Function to parse a CSV line properly handling quoted fields
+    const parseCSVLine = (line) => {
+      const result = [];
+      let current = '';
+      let inQuotes = false;
+      
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        
+        if (char === '"') {
+          if (inQuotes && line[i + 1] === '"') {
+            // Escaped quote
+            current += '"';
+            i++; // Skip next quote
+          } else {
+            // Toggle quote state
+            inQuotes = !inQuotes;
+          }
+        } else if (char === ',' && !inQuotes) {
+          // Field separator
+          result.push(current.trim());
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      
+      // Add the last field
+      result.push(current.trim());
+      return result;
+    };
+
+    const headers = parseCSVLine(lines[0]);
     const items = [];
 
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i].trim();
       if (!line) continue; // Skip empty lines
 
-      const values = line.split(',').map(value => value.trim());
+      const values = parseCSVLine(line);
       if (values.length !== headers.length) {
         throw new Error(`Row ${i + 1} has ${values.length} values but header has ${headers.length} columns`);
       }
@@ -201,6 +234,9 @@ exports.createItem = async (req, res) => {
       defaultColor,
       discountedPrice,
       filters,
+      metaTitle,
+      metaDescription,
+      searchKeywords,
     } = req.body;
 
     // Validate required fields
@@ -286,6 +322,21 @@ exports.createItem = async (req, res) => {
       );
     }
 
+    // Parse searchKeywords if provided
+    let parsedSearchKeywords = [];
+    if (searchKeywords) {
+      if (typeof searchKeywords === "string") {
+        try {
+          parsedSearchKeywords = JSON.parse(searchKeywords);
+        } catch {
+          // If JSON parsing fails, treat as comma-separated string
+          parsedSearchKeywords = searchKeywords.split(',').map(keyword => keyword.trim()).filter(keyword => keyword);
+        }
+      } else if (Array.isArray(searchKeywords)) {
+        parsedSearchKeywords = searchKeywords.map(keyword => keyword.trim()).filter(keyword => keyword);
+      }
+    }
+
     // Create item
     const item = new Item({
       _id: itemId,
@@ -299,6 +350,9 @@ exports.createItem = async (req, res) => {
       filters: parsedFilters,
       image: imageUrl,
       defaultColor: capitalDefaultColor,
+      metaTitle: metaTitle || undefined,
+      metaDescription: metaDescription || undefined,
+      searchKeywords: parsedSearchKeywords,
     });
 
     await item.save();
@@ -352,7 +406,7 @@ exports.deleteItem = async (req, res) => {
 exports.updateItem = async (req, res) => {
   try {
     const { itemId } = req.params;
-    const { name, description, MRP, totalStock, discountedPrice, defaultColor, itemImageId, categoryId, subCategoryId } = req.body;
+    const { name, description, MRP, totalStock, discountedPrice, defaultColor, itemImageId, categoryId, subCategoryId, metaTitle, metaDescription, searchKeywords } = req.body;
     let { filters } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(itemId)) {
@@ -446,6 +500,26 @@ exports.updateItem = async (req, res) => {
     if (itemImageId) item.itemImageId = itemImageId;
     if (categoryId) item.categoryId = categoryId;
     if (subCategoryId) item.subCategoryId = subCategoryId;
+    if (metaTitle !== undefined) item.metaTitle = metaTitle;
+    if (metaDescription !== undefined) item.metaDescription = metaDescription;
+    
+    // Handle searchKeywords update
+    if (searchKeywords !== undefined) {
+      let parsedSearchKeywords = [];
+      if (searchKeywords) {
+        if (typeof searchKeywords === "string") {
+          try {
+            parsedSearchKeywords = JSON.parse(searchKeywords);
+          } catch {
+            // If JSON parsing fails, treat as comma-separated string
+            parsedSearchKeywords = searchKeywords.split(',').map(keyword => keyword.trim()).filter(keyword => keyword);
+          }
+        } else if (Array.isArray(searchKeywords)) {
+          parsedSearchKeywords = searchKeywords.map(keyword => keyword.trim()).filter(keyword => keyword);
+        }
+      }
+      item.searchKeywords = parsedSearchKeywords;
+    }
 
     // Parse filters if provided
     if (typeof filters === "string") {
@@ -976,6 +1050,9 @@ exports.findItems = async (req, res) => {
     const {
       categoryId,
       subCategoryId,
+      categoryIds, // Array of category IDs
+      subCategoryIds, // Array of subcategory IDs
+      specificItems, // Array of specific item IDs
       filters = [], // Default to empty array to ensure no filters initially
       name,
       keyword,
@@ -988,6 +1065,9 @@ exports.findItems = async (req, res) => {
     console.log('🛠️ Parameters:', {
       categoryId,
       subCategoryId,
+      categoryIds,
+      subCategoryIds,
+      specificItems,
       filters,
       name,
       keyword,
@@ -1005,10 +1085,28 @@ exports.findItems = async (req, res) => {
       console.log('✅ Added categoryId to query:', categoryId);
     }
 
+    // Add categoryIds to query if provided (array of category IDs)
+    if (categoryIds && Array.isArray(categoryIds) && categoryIds.length > 0) {
+      query.categoryId = { $in: categoryIds };
+      console.log('✅ Added categoryIds to query:', categoryIds);
+    }
+
     // Add subCategoryId to query if provided
     if (subCategoryId) {
       query.subCategoryId = subCategoryId;
       console.log('✅ Added subCategoryId to query:', subCategoryId);
+    }
+
+    // Add subCategoryIds to query if provided (array of subcategory IDs)
+    if (subCategoryIds && Array.isArray(subCategoryIds) && subCategoryIds.length > 0) {
+      query.subCategoryId = { $in: subCategoryIds };
+      console.log('✅ Added subCategoryIds to query:', subCategoryIds);
+    }
+
+    // Add specificItems to query if provided (array of specific item IDs)
+    if (specificItems && Array.isArray(specificItems) && specificItems.length > 0) {
+      query._id = { $in: specificItems };
+      console.log('✅ Added specificItems to query:', specificItems);
     }
 
     // Handle filters, including price range
@@ -1124,5 +1222,142 @@ exports.findItems = async (req, res) => {
       message: 'Error fetching items',
       error: error.message,
     });
+  }
+};
+
+// Add existing items to section from CSV (by item names)
+exports.addExistingItemsToSection = async (req, res) => {
+  console.log("addExistingItemsToSection");
+  try {
+    const { sectionId } = req.params;
+    
+    if (!req.file) {
+      return res.status(400).json(apiResponse(400, false, "CSV file is required"));
+    }
+
+    // Parse CSV file to get item names
+    const fileContent = req.file.buffer.toString("utf-8");
+    let itemNames;
+    
+    try {
+      const parsedData = parseCSV(fileContent);
+      // Extract item names from CSV
+      itemNames = parsedData.map(item => item.name).filter(name => name && name.trim());
+    } catch (err) {
+      return res.status(400).json(apiResponse(400, false, `CSV parsing error: ${err.message}`));
+    }
+
+    if (!itemNames || itemNames.length === 0) {
+      return res.status(400).json(apiResponse(400, false, "No valid item names found in CSV"));
+    }
+
+    // Find existing items by names
+    const existingItems = await Item.find({ 
+      name: { $in: itemNames } 
+    }).populate('categoryId subCategoryId');
+
+    if (existingItems.length === 0) {
+      return res.status(404).json(apiResponse(404, false, "No existing items found with the provided names"));
+    }
+
+    // Get the section
+    const section = await HomePageSection.findById(sectionId);
+    
+    if (!section) {
+      return res.status(404).json(apiResponse(404, false, "Section not found"));
+    }
+
+    // Extract item IDs, category IDs, and subcategory IDs
+    const itemIds = existingItems.map(item => item._id);
+    const categoryIds = existingItems
+      .map(item => item.categoryId?._id)
+      .filter(id => id); // Remove null/undefined
+    const subcategoryIds = existingItems
+      .map(item => item.subCategoryId?._id)
+      .filter(id => id); // Remove null/undefined
+
+    // Remove duplicates
+    const uniqueItemIds = [...new Set(itemIds)];
+    const uniqueCategoryIds = [...new Set(categoryIds)];
+    const uniqueSubcategoryIds = [...new Set(subcategoryIds)];
+
+    // Update section with new items, categories, and subcategories
+    const updateData = {
+      "dataConfig.items": [...new Set([...(section.dataConfig.items || []), ...uniqueItemIds])],
+      "dataConfig.categories": [...new Set([...(section.dataConfig.categories || []), ...uniqueCategoryIds])],
+      "dataConfig.subcategories": [...new Set([...(section.dataConfig.subcategories || []), ...uniqueSubcategoryIds])]
+    };
+
+    await HomePageSection.findByIdAndUpdate(sectionId, {
+      $set: updateData
+    });
+
+    // Find items that weren't found
+    const foundItemNames = existingItems.map(item => item.name);
+    const notFoundItems = itemNames.filter(name => !foundItemNames.includes(name));
+
+    const responseMessage = `Successfully added ${existingItems.length} existing items to the section.`;
+    const notFoundMessage = notFoundItems.length > 0 ? ` Items not found: ${notFoundItems.join(', ')}` : '';
+
+    return res.status(200).json(apiResponse(200, true, responseMessage + notFoundMessage, {
+      addedItems: existingItems.length,
+      addedCategories: uniqueCategoryIds.length,
+      addedSubcategories: uniqueSubcategoryIds.length,
+      notFoundItems: notFoundItems,
+      items: existingItems.map(item => ({
+        name: item.name,
+        category: item.categoryId?.name || 'No category',
+        subcategory: item.subCategoryId?.name || 'No subcategory'
+      }))
+    }));
+
+  } catch (error) {
+    console.error('Error adding existing items to section:', error.message);
+    return res.status(500).json(apiResponse(500, false, 'Internal server error while adding items to section'));
+  }
+};
+
+// Download CSV template for existing items
+exports.downloadExistingItemsTemplate = async (req, res) => {
+  console.log("downloadExistingItemsTemplate");
+  try {
+    console.log('📥 Downloading existing items template...');
+    
+    // Get all items from the database (limit to 50 for template)
+    const sampleItems = await Item.find({}).limit(50).select('name').sort({ createdAt: -1 });
+    
+    console.log(`📊 Found ${sampleItems.length} items in database`);
+    
+    let csvContent = 'name\n';
+    
+    if (sampleItems.length > 0) {
+      console.log('📝 Adding actual item names to template:');
+      sampleItems.forEach((item, index) => {
+        console.log(`  ${index + 1}. ${item.name}`);
+        csvContent += `"${item.name}"\n`;
+      });
+    } else {
+      console.log('⚠️ No items found in database, using example names');
+      // If no items exist, provide example names
+      csvContent += `"Classic Cotton T-Shirt"\n`;
+      csvContent += `"Formal Business Shirt"\n`;
+      csvContent += `"Slim Fit Jeans"\n`;
+      csvContent += `"Elegant Evening Dress"\n`;
+      csvContent += `"Casual Summer Top"\n`;
+      csvContent += `"A-Line Skirt"\n`;
+      csvContent += `"Kids Cartoon T-Shirt"\n`;
+      csvContent += `"Princess Dress for Girls"\n`;
+      csvContent += `"Limited Edition Hoodie"\n`;
+      csvContent += `"Designer Handbag"\n`;
+    }
+
+    console.log('📤 Sending CSV template with', sampleItems.length > 0 ? sampleItems.length : 10, 'items');
+    
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="existing_items_template.csv"');
+    res.send(csvContent);
+  } catch (error) {
+    console.error('❌ Error downloading existing items template:', error.message);
+    return res.status(500).json(apiResponse(500, false, 'Internal server error while downloading template'));
   }
 };

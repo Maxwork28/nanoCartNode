@@ -48,7 +48,9 @@ const partnerOrderRoutes = require("./routes/partnerRoutes/partnerOrderRoutes");
 
 const adminTotalCountRoutes=require("./routes/adminSideRoutes/adminTotalCountRoutes")
 const adminOrderRoutes=require("./routes/adminSideRoutes/adminOrderRoutes")
+const subAdminRoutes=require("./routes/adminSideRoutes/subAdminRoutes")
 const homePageBannerRoutes=require("./routes/homePageBannerRoutes/homePageBannerRoutes")
+const homePageSectionRoutes=require("./routes/homePageSectionRoutes/homePageSectionRoutes")
 const couponRoutes=require("./routes/couponRoutes/couponRoutes")
 const fakeUserRoutes=require("./routes/fakeDataRoutes/fakeUserRoutes")
 const fakeRatingReviewRoutes=require("./routes/fakeDataRoutes/fakeReviewRatingRoutes")
@@ -105,9 +107,12 @@ app.use("/api/partner/order", partnerOrderRoutes);
 app.use("/api/admin",adminTotalCountRoutes)
 // Specific for Orders only
 app.use("/api/admin/order",adminOrderRoutes)
+// SubAdmin management routes
+app.use("/api/admin/subadmin",subAdminRoutes)
 
 
 app.use("/api/home-page-banner",homePageBannerRoutes)
+app.use("/api/homepage-sections",homePageSectionRoutes)
 app.use("/api/coupon",couponRoutes)
 app.use("/api/user/fake",fakeUserRoutes)
 app.use("/api/user/fake",fakeRatingReviewRoutes)

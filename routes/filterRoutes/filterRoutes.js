@@ -1,23 +1,25 @@
 const express = require("express");
 const router = express.Router();
 const filterController = require("../../controllers/filterController/filterController");
-const {verifyToken}=require("../../middlewares/verifyToken");
-const {isAdmin}=require("../../middlewares/isAdmin")
+const { verifyTokenAndRole } = require("../../middlewares/verifyToken");
+const { auditLogger } = require('../../middlewares/auditLogger');
 
-//routes to create filter
-router.post("/create", verifyToken,isAdmin,filterController.createFilter);
+// Routes to create filter
+router.post("/create", ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), filterController.createFilter);
 
-//routes to update filter
-router.put("/:id",verifyToken,isAdmin, filterController.updateFilter);
+// Routes to update filter
+router.put("/:id", ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), filterController.updateFilter);
 
-//routes to delete filter
-router.delete("/:id",verifyToken,isAdmin, filterController.deleteFilter);
+// Routes to delete filter
+router.delete("/:id", ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), filterController.deleteFilter);
 
-//routes to get all filter
-router.get("/", filterController.getAllFilters); 
+// Routes to get all filters
+router.get("/", filterController.getAllFilters);
 
-//routes to get filter by id
-router.get("/:id",filterController.getFilterById);
+// Routes to search filters
+router.get("/search", filterController.searchFilters);
 
+// Routes to get filter by id
+router.get("/:id", filterController.getFilterById);
 
 module.exports = router;

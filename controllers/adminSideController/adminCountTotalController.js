@@ -457,6 +457,41 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
+// Toggle User Active Status
+exports.toggleUserStatus = async (req, res) => {
+  console.log("[TOGGLE USER STATUS] Request received");
+  try {
+    const { userId } = req.params;
+    const { isActive } = req.body;
+
+    if (!userId) {
+      return res.status(400).json(apiResponse(400, false, "User ID is required"));
+    }
+
+    if (typeof isActive !== 'boolean') {
+      return res.status(400).json(apiResponse(400, false, "isActive must be a boolean value"));
+    }
+
+    console.log(`🔄 Toggling user ${userId} status to ${isActive}`);
+    
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { isActive: isActive },
+      { new: true, select: "name phoneNumber email isPhoneVerified isEmailVerified isActive isAddress" }
+    );
+
+    if (!user) {
+      return res.status(404).json(apiResponse(404, false, "User not found"));
+    }
+
+    console.log(`✅ User ${userId} status updated to ${isActive}`);
+    return res.status(200).json(apiResponse(200, true, `User ${isActive ? 'activated' : 'deactivated'} successfully`, { user }));
+  } catch (error) {
+    console.error("[TOGGLE USER STATUS] Error:", error);
+    return res.status(500).json(apiResponse(500, false, "An error occurred while updating user status", { error: error.message }));
+  }
+};
+
 // Get All Partners
 exports.getAllPartners = async (req, res) => {
   console.log("[GET ALL PARTNERS] Request received");
@@ -481,6 +516,42 @@ exports.getAllPartners = async (req, res) => {
     return res.status(500).json(apiResponse(500, false, "An error occurred while fetching partners", { error: error.message }));
   }
 };
+
+// Toggle Partner Active Status
+exports.togglePartnerStatus = async (req, res) => {
+  console.log("[TOGGLE PARTNER STATUS] Request received");
+  try {
+    const { partnerId } = req.params;
+    const { isActive } = req.body;
+
+    if (!partnerId) {
+      return res.status(400).json(apiResponse(400, false, "Partner ID is required"));
+    }
+
+    if (typeof isActive !== 'boolean') {
+      return res.status(400).json(apiResponse(400, false, "isActive must be a boolean value"));
+    }
+
+    console.log(`🔄 Toggling partner ${partnerId} status to ${isActive}`);
+    
+    const partner = await Partner.findByIdAndUpdate(
+      partnerId,
+      { isActive: isActive },
+      { new: true, select: "name phoneNumber email isVerified isPhoneVerified isEmailVerified isActive isProfile isWalletCreated isAddress imageShop" }
+    );
+
+    if (!partner) {
+      return res.status(404).json(apiResponse(404, false, "Partner not found"));
+    }
+
+    console.log(`✅ Partner ${partnerId} status updated to ${isActive}`);
+    return res.status(200).json(apiResponse(200, true, `Partner ${isActive ? 'activated' : 'deactivated'} successfully`, { partner }));
+  } catch (error) {
+    console.error("[TOGGLE PARTNER STATUS] Error:", error);
+    return res.status(500).json(apiResponse(500, false, "An error occurred while updating partner status", { error: error.message }));
+  }
+};
+
 exports.getTotalUsers = async (req, res) => {
   console.log("[GET TOTAL USERS] Request received");
   try {
@@ -542,6 +613,128 @@ exports.getTotalItems = async (req, res) => {
   } catch (error) {
     console.error("[GET TOTAL ITEMS] Error:", error);
     return res.status(500).json(apiResponse(500, false, "An error occurred while fetching total items", { error: error.message }));
+  }
+};
+
+// Low Stock Items Count
+exports.getLowStockItems = async (req, res) => {
+  console.log("[GET LOW STOCK ITEMS] Request received");
+  try {
+    const { threshold = 10, fixData = false, createTestItems = false } = req.query; // Default threshold is 10, can be customized
+    const thresholdNum = parseInt(threshold);
+    
+    // If createTestItems is true, create some test items with low stock
+    if (createTestItems === 'true') {
+      console.log("[GET LOW STOCK ITEMS] Creating test items with low stock...");
+      
+      // Get a category and subcategory to use for test items
+      const category = await Category.findOne({});
+      const subCategory = await SubCategory.findOne({});
+      
+      if (category && subCategory) {
+        // Create test items with different stock levels
+        const testItems = [
+          {
+            name: "Test Item - Zero Stock",
+            description: "Test item with zero stock",
+            MRP: 100,
+            totalStock: 0,
+            discountedPrice: 90,
+            categoryId: category._id,
+            subCategoryId: subCategory._id,
+            defaultColor: "Red"
+          },
+          {
+            name: "Test Item - Low Stock",
+            description: "Test item with low stock (5)",
+            MRP: 200,
+            totalStock: 5,
+            discountedPrice: 180,
+            categoryId: category._id,
+            subCategoryId: subCategory._id,
+            defaultColor: "Blue"
+          },
+          {
+            name: "Test Item - Very Low Stock",
+            description: "Test item with very low stock (2)",
+            MRP: 150,
+            totalStock: 2,
+            discountedPrice: 135,
+            categoryId: category._id,
+            subCategoryId: subCategory._id,
+            defaultColor: "Green"
+          }
+        ];
+        
+        for (const itemData of testItems) {
+          const item = new Item(itemData);
+          await item.save();
+          console.log(`[GET LOW STOCK ITEMS] Created test item: ${item.name} with stock: ${item.totalStock}, isOutOfStock: ${item.isOutOfStock}`);
+        }
+      }
+    }
+    
+    // If fixData is true, update all items to have correct isOutOfStock status
+    if (fixData === 'true') {
+      console.log("[GET LOW STOCK ITEMS] Fixing isOutOfStock field for all items...");
+      
+      // Update items with zero stock to have isOutOfStock = true
+      await Item.updateMany(
+        { totalStock: 0 },
+        { $set: { isOutOfStock: true } }
+      );
+      
+      // Update items with stock > 0 to have isOutOfStock = false
+      await Item.updateMany(
+        { totalStock: { $gt: 0 } },
+        { $set: { isOutOfStock: false } }
+      );
+      
+      console.log("[GET LOW STOCK ITEMS] Fixed isOutOfStock field for all items");
+    }
+    
+    // First, let's get some debug information about the items
+    const totalItems = await Item.countDocuments({});
+    const itemsWithLowStock = await Item.countDocuments({
+      $or: [
+        { totalStock: { $lte: thresholdNum } },
+        { isOutOfStock: true }
+      ]
+    });
+    
+    // Get some sample items to debug
+    const sampleItems = await Item.find({})
+      .select('name totalStock isOutOfStock')
+      .limit(5)
+      .lean();
+    
+    // Also check items with specific stock levels
+    const itemsWithZeroStock = await Item.countDocuments({ totalStock: 0 });
+    const itemsWithStockUnderThreshold = await Item.countDocuments({ totalStock: { $lte: thresholdNum } });
+    const itemsMarkedOutOfStock = await Item.countDocuments({ isOutOfStock: true });
+    
+    console.log("[GET LOW STOCK ITEMS] Debug Info:");
+    console.log("- Total items:", totalItems);
+    console.log("- Items with low stock:", itemsWithLowStock);
+    console.log("- Items with zero stock:", itemsWithZeroStock);
+    console.log("- Items with stock <= threshold:", itemsWithStockUnderThreshold);
+    console.log("- Items marked out of stock:", itemsMarkedOutOfStock);
+    console.log("- Sample items:", sampleItems);
+    
+    return res.status(200).json(apiResponse(200, true, "Low stock items count retrieved successfully", { 
+      lowStockItems: itemsWithLowStock,
+      threshold: thresholdNum,
+      debug: {
+        totalItems,
+        itemsWithZeroStock,
+        itemsWithStockUnderThreshold,
+        itemsMarkedOutOfStock,
+        sampleItems
+      }
+    }));
+  } catch (error) {
+    console.error("[GET LOW STOCK ITEMS] Error:", error);
+    return res.status(500).json(apiResponse(500, false, "An error occurred while fetching low stock items count", { error: error.message }));
   }
 };
 
