@@ -94,7 +94,7 @@ async function seedDatabase() {
     console.log('Database dropped');
 
     // Sample data
-    const imageUrl = 'https://maatebucket.s3.ap-south-1.amazonaws.com/Nanocart/categories/68dad78d01850599898b909f/subCategories/68dad78e01850599898b90c6/item/68dad8bba099dd2689f16328/1759172832782_limited_edition_hoodie_001.jpghttps://maatebucket.s3.ap-south-1.amazonaws.com/Nanocart/categories/68dad78d01850599898b909f/subCategories/68dad78e01850599898b90c6/item/68dad8bba099dd2689f16328/1759172832782_limited_edition_hoodie_001.jpg.png';
+    const imageUrl = 'https://maatebucket.s3.ap-south-1.amazonaws.com/Nanocart/categories/68daf0700ea3984a354f9b4f/subCategories/68daf0710ea3984a354f9b74/item/68daf0710ea3984a354f9be7/1759179201290_casual_summer_top_001.png';
 
     // Categories - Create with staggered dates for better trends visualization
     const categories = await Category.insertMany([
@@ -249,23 +249,14 @@ async function seedDatabase() {
     }
 
     // Users - Create with staggered dates for better trends visualization
-    const users = await User.insertMany([
+    // First create Admin and User accounts, then SubAdmin accounts with assignedBy field
+    
+    // 5 Admin Demo Accounts
+    const adminUsers = await User.insertMany([
       {
-        name: 'John Doe',
-        phoneNumber: '9876543210',
-        email: 'john.doe@example.com',
-        role: 'User',
-        isPhoneVerified: true,
-        isEmailVerified: true,
-        isActive: true,
-        isPartner: false,
-        isAddress: false,
-        createdAt: new Date('2025-06-10')
-      },
-      {
-        name: 'Admin User 1',
+        name: 'Admin Demo 1',
         phoneNumber: '9717999451',
-        email: 'admin1@example.com',
+        email: 'admin1@demo.com',
         role: 'Admin',
         isPhoneVerified: true,
         isEmailVerified: true,
@@ -275,9 +266,9 @@ async function seedDatabase() {
         createdAt: new Date('2025-06-05')
       },
       {
-        name: 'Admin User 2',
+        name: 'Admin Demo 2',
         phoneNumber: '9337723626',
-        email: 'admin2@example.com',
+        email: 'admin2@demo.com',
         role: 'Admin',
         isPhoneVerified: true,
         isEmailVerified: true,
@@ -287,9 +278,9 @@ async function seedDatabase() {
         createdAt: new Date('2025-06-06')
       },
       {
-        name: 'Admin User 3',
+        name: 'Admin Demo 3',
         phoneNumber: '9717999452',
-        email: 'admin3@example.com',
+        email: 'admin3@demo.com',
         role: 'Admin',
         isPhoneVerified: true,
         isEmailVerified: true,
@@ -299,9 +290,9 @@ async function seedDatabase() {
         createdAt: new Date('2025-06-07')
       },
       {
-        name: 'Admin User 4',
+        name: 'Admin Demo 4',
         phoneNumber: '8637222939',
-        email: 'admin4@example.com',
+        email: 'admin4@demo.com',
         role: 'Admin',
         isPhoneVerified: true,
         isEmailVerified: true,
@@ -311,9 +302,9 @@ async function seedDatabase() {
         createdAt: new Date('2025-06-08')
       },
       {
-        name: 'Admin User 5',
+        name: 'Admin Demo 5',
         phoneNumber: '9220604894',
-        email: 'admin5@example.com',
+        email: 'admin5@demo.com',
         role: 'Admin',
         isPhoneVerified: true,
         isEmailVerified: true,
@@ -321,12 +312,16 @@ async function seedDatabase() {
         isPartner: false,
         isAddress: false,
         createdAt: new Date('2025-06-09')
-      },
+      }
+    ]);
+
+    // 5 User Demo Accounts
+    const regularUsers = await User.insertMany([
       {
-        name: 'Admin User 6',
+        name: 'User Demo 1',
         phoneNumber: '7205981525',
-        email: 'admin6@example.com',
-        role: 'Admin',
+        email: 'user1@demo.com',
+        role: 'User',
         isPhoneVerified: true,
         isEmailVerified: true,
         isActive: true,
@@ -335,10 +330,10 @@ async function seedDatabase() {
         createdAt: new Date('2025-06-10')
       },
       {
-        name: 'Admin User 7',
+        name: 'User Demo 2',
         phoneNumber: '8770824288',
-        email: 'admin7@example.com',
-        role: 'Admin',
+        email: 'user2@demo.com',
+        role: 'User',
         isPhoneVerified: true,
         isEmailVerified: true,
         isActive: true,
@@ -347,10 +342,10 @@ async function seedDatabase() {
         createdAt: new Date('2025-06-11')
       },
       {
-        name: 'Admin User 8',
+        name: 'User Demo 3',
         phoneNumber: '9556764730',
-        email: 'admin8@example.com',
-        role: 'Admin',
+        email: 'user3@demo.com',
+        role: 'User',
         isPhoneVerified: true,
         isEmailVerified: true,
         isActive: true,
@@ -359,10 +354,10 @@ async function seedDatabase() {
         createdAt: new Date('2025-06-12')
       },
       {
-        name: 'Admin User 9',
+        name: 'User Demo 4',
         phoneNumber: '9829699381',
-        email: 'admin9@example.com',
-        role: 'Admin',
+        email: 'user4@demo.com',
+        role: 'User',
         isPhoneVerified: true,
         isEmailVerified: true,
         isActive: true,
@@ -371,42 +366,100 @@ async function seedDatabase() {
         createdAt: new Date('2025-06-13')
       },
       {
-        name: 'Sarah Wilson',
-        phoneNumber: '9876543212',
-        email: 'sarah.wilson@example.com',
+        name: 'User Demo 5',
+        phoneNumber: '9876543210',
+        email: 'user5@demo.com',
         role: 'User',
         isPhoneVerified: true,
         isEmailVerified: true,
         isActive: true,
         isPartner: false,
         isAddress: false,
-        createdAt: new Date('2025-07-15')
-      },
-      {
-        name: 'Mike Johnson',
-        phoneNumber: '9876543213',
-        email: 'mike.johnson@example.com',
-        role: 'User',
-        isPhoneVerified: true,
-        isEmailVerified: true,
-        isActive: true,
-        isPartner: false,
-        isAddress: false,
-        createdAt: new Date('2025-08-20')
-      },
-      {
-        name: 'Lisa Brown',
-        phoneNumber: '9876543214',
-        email: 'lisa.brown@example.com',
-        role: 'User',
-        isPhoneVerified: true,
-        isEmailVerified: true,
-        isActive: true,
-        isPartner: false,
-        isAddress: false,
-        createdAt: new Date('2025-09-12')
-      },
+        createdAt: new Date('2025-06-14')
+      }
     ]);
+
+    // 5 SubAdmin Demo Accounts (with assignedBy field from first admin)
+    const subAdminUsers = await User.insertMany([
+      {
+        name: 'SubAdmin Demo 1',
+        phoneNumber: '9876543212',
+        email: 'subadmin1@demo.com',
+        role: 'SubAdmin',
+        isPhoneVerified: true,
+        isEmailVerified: true,
+        isActive: true,
+        isPartner: false,
+        isAddress: false,
+        isSubAdminActive: true,
+        permissions: ['read', 'create', 'update', 'delete'],
+        assignedBy: adminUsers[0]._id,
+        createdAt: new Date('2025-06-15')
+      },
+      {
+        name: 'SubAdmin Demo 2',
+        phoneNumber: '9876543213',
+        email: 'subadmin2@demo.com',
+        role: 'SubAdmin',
+        isPhoneVerified: true,
+        isEmailVerified: true,
+        isActive: true,
+        isPartner: false,
+        isAddress: false,
+        isSubAdminActive: true,
+        permissions: ['read', 'create', 'update'],
+        assignedBy: adminUsers[0]._id,
+        createdAt: new Date('2025-06-16')
+      },
+      {
+        name: 'SubAdmin Demo 3',
+        phoneNumber: '9876543214',
+        email: 'subadmin3@demo.com',
+        role: 'SubAdmin',
+        isPhoneVerified: true,
+        isEmailVerified: true,
+        isActive: true,
+        isPartner: false,
+        isAddress: false,
+        isSubAdminActive: true,
+        permissions: ['read', 'create'],
+        assignedBy: adminUsers[0]._id,
+        createdAt: new Date('2025-06-17')
+      },
+      {
+        name: 'SubAdmin Demo 4',
+        phoneNumber: '9876543215',
+        email: 'subadmin4@demo.com',
+        role: 'SubAdmin',
+        isPhoneVerified: true,
+        isEmailVerified: true,
+        isActive: true,
+        isPartner: false,
+        isAddress: false,
+        isSubAdminActive: true,
+        permissions: ['read', 'update'],
+        assignedBy: adminUsers[0]._id,
+        createdAt: new Date('2025-06-18')
+      },
+      {
+        name: 'SubAdmin Demo 5',
+        phoneNumber: '9876543216',
+        email: 'subadmin5@demo.com',
+        role: 'SubAdmin',
+        isPhoneVerified: true,
+        isEmailVerified: true,
+        isActive: false, // Inactive for testing
+        isPartner: false,
+        isAddress: false,
+        isSubAdminActive: false,
+        permissions: ['read'],
+        assignedBy: adminUsers[0]._id,
+        createdAt: new Date('2025-06-19')
+      }
+    ]);
+
+    // Combine all users for easier reference
+    const users = [...adminUsers, ...regularUsers, ...subAdminUsers];
 
     // Create audit logs for user creation and login attempts
     for (let i = 0; i < users.length; i++) {
@@ -2053,96 +2106,39 @@ async function seedDatabase() {
       }
     }
 
-    // Create SubAdmin users after admin users are created
-    const adminUsers = users.filter(user => user.role === 'Admin');
-    if (adminUsers.length > 0) {
-      const firstAdminId = adminUsers[0]._id;
-      
-      // Create SubAdmin users with proper assignedBy field
-      const subAdminUsers = await User.insertMany([
-        {
-          name: 'SubAdmin User 1',
-          phoneNumber: '9829699382',
-          email: 'subadmin1@example.com',
-          role: 'SubAdmin',
-          isPhoneVerified: true,
-          isEmailVerified: true,
-          isActive: true,
-          isPartner: false,
-          isAddress: false,
-          isSubAdminActive: true,
-          permissions: ['read', 'create', 'update', 'delete'],
-          assignedBy: firstAdminId,
-          createdAt: new Date('2025-06-15')
-        },
-        {
-          name: 'SubAdmin User 2',
-          phoneNumber: '9876543216',
-          email: 'subadmin2@example.com',
-          role: 'SubAdmin',
-          isPhoneVerified: true,
-          isEmailVerified: true,
-          isActive: true,
-          isPartner: false,
-          isAddress: false,
-          isSubAdminActive: true,
-          permissions: ['read', 'create', 'update'],
-          assignedBy: firstAdminId,
-          createdAt: new Date('2025-06-16')
-        },
-        {
-          name: 'SubAdmin User 3',
-          phoneNumber: '9876543217',
-          email: 'subadmin3@example.com',
-          role: 'SubAdmin',
-          isPhoneVerified: true,
-          isEmailVerified: true,
-          isActive: true,
-          isPartner: false,
-          isAddress: false,
-          isSubAdminActive: false, // Inactive subadmin for testing
-          permissions: ['read'],
-          assignedBy: firstAdminId,
-          createdAt: new Date('2025-06-17')
-        }
-      ]);
-      
-      console.log('Created SubAdmin users with assignedBy field');
-
-      // Create audit logs for SubAdmin creation (Admin activities)
-      const adminUser = users.find(u => u.role === 'Admin');
-      if (adminUser) {
-        for (let i = 0; i < subAdminUsers.length; i++) {
-          const subAdmin = subAdminUsers[i];
-          
-          await createAuditLog(
-            adminUser._id,
-            'Admin',
-            adminUser.name,
-            adminUser.phoneNumber,
-            'CREATE',
-            'SUBADMIN',
-            subAdmin._id,
-            { 
-              name: subAdmin.name,
-              email: subAdmin.email,
-              phoneNumber: subAdmin.phoneNumber,
-              permissions: subAdmin.permissions,
-              isSubAdminActive: subAdmin.isSubAdminActive
-            },
-            null,
-            `Admin created SubAdmin: ${subAdmin.name} with permissions: ${subAdmin.permissions.join(', ')}`,
-            'SUCCESS',
-            null,
-            { 
-              name: subAdmin.name,
-              email: subAdmin.email,
-              phoneNumber: subAdmin.phoneNumber,
-              permissions: subAdmin.permissions
-            },
-            { success: true, subAdminId: subAdmin._id }
-          );
-        }
+    // Create audit logs for SubAdmin creation (Admin activities)
+    if (adminUsers.length > 0 && subAdminUsers.length > 0) {
+      const adminUser = adminUsers[0];
+      for (let i = 0; i < subAdminUsers.length; i++) {
+        const subAdmin = subAdminUsers[i];
+        
+        await createAuditLog(
+          adminUser._id,
+          'Admin',
+          adminUser.name,
+          adminUser.phoneNumber,
+          'CREATE',
+          'SUBADMIN',
+          subAdmin._id,
+          { 
+            name: subAdmin.name,
+            email: subAdmin.email,
+            phoneNumber: subAdmin.phoneNumber,
+            permissions: subAdmin.permissions,
+            isSubAdminActive: subAdmin.isSubAdminActive
+          },
+          null,
+          `Admin created SubAdmin: ${subAdmin.name} with permissions: ${subAdmin.permissions.join(', ')}`,
+          'SUCCESS',
+          null,
+          { 
+            name: subAdmin.name,
+            email: subAdmin.email,
+            phoneNumber: subAdmin.phoneNumber,
+            permissions: subAdmin.permissions
+          },
+          { success: true, subAdminId: subAdmin._id }
+        );
       }
     }
 
@@ -2284,6 +2280,27 @@ async function seedDatabase() {
       });
       console.log(`   - ${section.sectionName}: ${section.title} (${section.campaign.name})`);
       console.log(`     Items: ${itemNames.join(', ')}`);
+    });
+
+    // Display demo phone numbers for testing
+    console.log('\n🎭 DEMO PHONE NUMBERS FOR TESTING:');
+    console.log('📱 All demo numbers use OTP: 123456');
+    console.log('\n👑 Admin Demo Numbers:');
+    const adminDemoUsers = users.filter(u => u.role === 'Admin');
+    adminDemoUsers.forEach((user, index) => {
+      console.log(`   ${index + 1}. ${user.phoneNumber} - ${user.name} (${user.email})`);
+    });
+    
+    console.log('\n👤 User Demo Numbers:');
+    const regularDemoUsers = users.filter(u => u.role === 'User');
+    regularDemoUsers.forEach((user, index) => {
+      console.log(`   ${index + 1}. ${user.phoneNumber} - ${user.name} (${user.email})`);
+    });
+    
+    console.log('\n👨‍💼 SubAdmin Demo Numbers:');
+    const subAdminDemoUsers = users.filter(u => u.role === 'SubAdmin');
+    subAdminDemoUsers.forEach((user, index) => {
+      console.log(`   ${index + 1}. ${user.phoneNumber} - ${user.name} (${user.email}) - Active: ${user.isSubAdminActive}`);
     });
   } catch (error) {
     console.error('Error seeding database:', error);

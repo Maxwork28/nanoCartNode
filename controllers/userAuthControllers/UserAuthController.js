@@ -472,6 +472,42 @@ exports.sendPhoneOtp = async (req, res) => {
         .json(apiResponse(400, false, "Valid 10-digit phone number required"));
     }
 
+    // Demo phone numbers for testing
+    const demoPhoneNumbers = [
+      // Admin demo numbers
+      '9717999451', '9337723626', '9717999452', '8637222939', '9220604894',
+      // User demo numbers  
+      '7205981525', '8770824288', '9556764730', '9829699381', '9876543210',
+      // SubAdmin demo numbers
+      '9876543212', '9876543213', '9876543214', '9876543215', '9876543216'
+    ];
+
+    // Check if it's a demo phone number
+    if (demoPhoneNumbers.includes(phoneNumber)) {
+      console.log('🎭 Demo phone number detected, using demo OTP: 123456');
+      
+      // Store demo OTP in database
+      const phoneNumberExist = await PhoneOTP.findOne({ phoneNumber });
+      if (!phoneNumberExist) {
+        await PhoneOTP.create({ 
+          phoneNumber, 
+          otp: '123456', // Demo OTP
+          expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+          isVerified: false
+        });
+        console.log('✅ New demo OTP record created in database');
+      } else {
+        phoneNumberExist.otp = '123456';
+        phoneNumberExist.expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+        phoneNumberExist.isVerified = false;
+        await phoneNumberExist.save();
+        console.log('✅ Existing demo OTP record updated in database');
+      }
+
+      console.log('🚀 Demo OTP sent successfully, returning response');
+      return res.status(200).json(apiResponse(200, true, "Demo OTP sent successfully (123456)"));
+    }
+
     try {
       // Send OTP via MSG91 service (MSG91 generates its own OTP)
       console.log('📤 Sending OTP via MSG91 service...');
@@ -552,6 +588,27 @@ exports.phoneOtpVerification = async (req, res) => {
     }
     console.log('✅ OTP has not expired');
     
+    // Check if it's a demo phone number with demo OTP
+    const demoPhoneNumbers = [
+      // Admin demo numbers
+      '9717999451', '9337723626', '9717999452', '8637222939', '9220604894',
+      // User demo numbers  
+      '7205981525', '8770824288', '9556764730', '9829699381', '9876543210',
+      // SubAdmin demo numbers
+      '9876543212', '9876543213', '9876543214', '9876543215', '9876543216'
+    ];
+
+    if (demoPhoneNumbers.includes(phoneNumber) && otp === '123456') {
+      console.log('🎭 Demo OTP verification successful');
+      dbOtpEntry.isVerified = true;
+      await dbOtpEntry.save();
+      console.log('✅ Demo OTP verified successfully, database updated');
+      
+      return res
+        .status(200)
+        .json(apiResponse(200, true, "Demo phone verified successfully"));
+    }
+
     // Use MSG91 to verify the OTP instead of comparing with stored value
     console.log('🔐 Verifying OTP with MSG91 service...');
     try {
