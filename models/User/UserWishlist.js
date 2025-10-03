@@ -17,8 +17,8 @@ const WishlistSchema = new mongoose.Schema(
         },
         color: {
           type: String,
-          required: [true, "color is required"],
           trim: true,
+          default: null,
         },
       },
     ],

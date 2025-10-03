@@ -157,18 +157,13 @@ const orderSchema = new mongoose.Schema(
     orderStatus: {
       type: String,
       enum: [
-        "Initiated",
-        "Confirmed",
-        "Ready for Dispatch",
+        "Order Placed",
+        "Ready to Dispatch", 
         "Dispatched",
         "Delivered",
-        "Cancelled",
-        "Returned",
-        "Exchanged",
-        "Partially Returned",
-        "Partially Exchanged",
+        "Cancelled"
       ],
-      default: "Initiated",
+      default: "Order Placed",
     },
     orderStatusDate:{type:Date},
     isOrderPlaced: { type: Boolean, default: false },

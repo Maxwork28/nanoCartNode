@@ -8,16 +8,11 @@ exports.updateOrderStatus = async (req, res) => {
     const { orderId, orderStatus } = req.body;
     // Validate orderStatus
     const validOrderStatuses = [
-      'Initiated',
-      'Confirmed',
-      'Ready for Dispatch',
+      'Order Placed',
+      'Ready to Dispatch',
       'Dispatched',
       'Delivered',
       'Cancelled',
-      'Returned',
-      'Exchange',
-      'Partially Returned',
-      'Partially Exchange',
     ];
     if (!orderStatus || !validOrderStatuses.includes(orderStatus)) {
       console.log('Invalid orderStatus:', orderStatus);

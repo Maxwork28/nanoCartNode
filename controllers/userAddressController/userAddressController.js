@@ -4,6 +4,9 @@ const UserAddress = require("../../models/User/UserAddress");
 // Create a new address
 exports.createAddress = async (req, res) => {
   try {
+    console.log('🏠 Creating address - Request body:', req.body);
+    console.log('👤 User ID from token:', req.user?.userId);
+    
     const { userId } = req.user;
     const {
       name,
@@ -19,11 +22,28 @@ exports.createAddress = async (req, res) => {
       isDefault,
     } = req.body;
 
+    console.log('📋 Extracted address data:', {
+      name,
+      phoneNumber,
+      email,
+      pincode,
+      addressLine1,
+      addressLine2,
+      cityTown,
+      state,
+      country,
+      addressType,
+      isDefault
+    });
+
     // Validate user exists
+    console.log('🔍 Looking for user with ID:', userId);
     const user = await User.findById(userId);
     if (!user) {
+      console.log('❌ User not found with ID:', userId);
       return res.status(404).json({ message: "User not found" });
     }
+    console.log('✅ User found:', user.name);
 
     // Create new address detail object
     const newAddressDetail = {
@@ -40,10 +60,14 @@ exports.createAddress = async (req, res) => {
       isDefault: isDefault || false,
     };
 
+    console.log('📝 New address detail object:', newAddressDetail);
+
     // Check if address already exists for user
+    console.log('🔍 Checking for existing address for user:', userId);
     let address = await UserAddress.findOne({ userId });
 
     if (address) {
+      console.log('📋 Found existing address document, adding new address detail');
       // Add new address to existing addressDetail array
       address.addressDetail.push(newAddressDetail);
 
@@ -55,6 +79,7 @@ exports.createAddress = async (req, res) => {
         }));
       }
     } else {
+      console.log('📋 No existing address document, creating new one');
       // Create new address document
       address = new UserAddress({
         userId,
@@ -62,7 +87,9 @@ exports.createAddress = async (req, res) => {
       });
     }
 
+    console.log('💾 Saving address to database...');
     await address.save();
+    console.log('✅ Address saved successfully');
 
     // Update user's isAddress flag
     user.isAddress = true;
@@ -73,6 +100,24 @@ exports.createAddress = async (req, res) => {
       address,
     });
   } catch (error) {
+    console.error('❌ Error creating address:', error);
+    
+    // Handle validation errors specifically
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({ 
+        message: "Validation failed", 
+        errors: validationErrors 
+      });
+    }
+    
+    // Handle duplicate key errors
+    if (error.code === 11000) {
+      return res.status(400).json({ 
+        message: "Address already exists" 
+      });
+    }
+    
     res
       .status(500)
       .json({ message: "Error creating address", error: error.message });

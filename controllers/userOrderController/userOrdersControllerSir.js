@@ -450,7 +450,7 @@ exports.createUserOrder = async (req, res) => {
       paymentMethod,
       isOrderPlaced: paymentMethod === "COD" ? true : false,
       totalAmount,
-      orderStatus: paymentMethod === "COD" ? "Confirmed" : "Initiated",
+      orderStatus: "Order Placed",
       orderStatusDate: new Date(),
       paymentStatus: "Pending",
       phonepeOrderId: null,
@@ -584,7 +584,7 @@ exports.verifyPayment = async (req, res) => {
           // Stock already updated in createUserOrder, no need to update again
           userOrder.paymentStatus = "Paid";
           userOrder.isOrderPlaced = true;
-          userOrder.orderStatus = "Confirmed";
+          userOrder.orderStatus = "Order Placed";
           await userOrder.save({ session });
         } catch (stockError) {
           if (stockError.message.includes("Insufficient stock")) {
@@ -687,7 +687,7 @@ exports.handlePhonePeCallback = async (req, res) => {
       // Stock already updated in createUserOrder, no need to update again
       order.paymentStatus = "Paid";
       order.isOrderPlaced = true;
-      order.orderStatus = "Confirmed";
+      order.orderStatus = "Order Placed";
     } else if (state === "FAILED" || state === "ATTEMPT_FAILED") {
       order.paymentStatus = "Failed";
       order.orderStatus = "Cancelled";
@@ -716,8 +716,31 @@ exports.handlePhonePeCallback = async (req, res) => {
 
 
 exports.cancelOrder = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  console.log("🚀 NEW CODE: cancelOrder function called with conditional transaction support");
+  // For development: Skip transactions if not in replica set
+  let session = null;
+  let useTransactions = false;
+  
+  try {
+    session = await mongoose.startSession();
+    await session.startTransaction();
+    // Test if the session actually works by doing a simple query
+    await UserAddress.findOne({}, null, { session }).limit(1);
+    useTransactions = true;
+    console.log("Using MongoDB transactions");
+  } catch (error) {
+    console.log("MongoDB transactions not available, proceeding without transactions:", error.message);
+    useTransactions = false;
+    if (session) {
+      try {
+        await session.endSession();
+      } catch (e) {
+        // Ignore cleanup errors
+      }
+    }
+    session = null;
+  }
+  
   const requestId = randomUUID();
 
   try {
@@ -728,16 +751,20 @@ exports.cancelOrder = async (req, res) => {
     // Validate userId
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       console.log("Invalid userId:", userId, requestId);
-      await session.abortTransaction();
-      session.endSession();
+      if (useTransactions) {
+        await session.abortTransaction();
+        session.endSession();
+      }
       return res.status(400).json(apiResponse(400, false, "Invalid userId"));
     }
 
     // Validate orderId
     if (!orderId || typeof orderId !== "string" || orderId.trim() === "") {
       console.log("Invalid orderId:", orderId, requestId);
-      await session.abortTransaction();
-      session.endSession();
+      if (useTransactions) {
+        await session.abortTransaction();
+        session.endSession();
+      }
       return res.status(400).json(apiResponse(400, false, "Valid orderId is required"));
     }
 
@@ -746,19 +773,23 @@ exports.cancelOrder = async (req, res) => {
 
     // Find order
     console.log("Finding order:", orderId, requestId);
-    const order = await UserOrder.findOne({ orderId, userId }).session(session);
+    const order = await UserOrder.findOne({ orderId, userId }, null, useTransactions ? { session } : {});
     if (!order) {
       console.log("Order not found:", orderId, requestId);
-      await session.abortTransaction();
-      session.endSession();
+      if (useTransactions) {
+        await session.abortTransaction();
+        session.endSession();
+      }
       return res.status(404).json(apiResponse(404, false, "Order not found"));
     }
 
     // Check if order is already cancelled
     if (order.isOrderCancelled) {
       console.log("Order already cancelled:", orderId, requestId);
-      await session.commitTransaction();
-      session.endSession();
+      if (useTransactions) {
+        await session.commitTransaction();
+        session.endSession();
+      }
       return res.status(400).json(apiResponse(400, false, "Order is already cancelled"));
     }
 
@@ -766,8 +797,10 @@ exports.cancelOrder = async (req, res) => {
     const nonCancellableStatuses = ["Dispatched", "Delivered", "Returned"];
     if (nonCancellableStatuses.includes(order.orderStatus)) {
       console.log(`Order cannot be cancelled in ${order.orderStatus} status`, requestId);
-      await session.abortTransaction();
-      session.endSession();
+      if (useTransactions) {
+        await session.abortTransaction();
+        session.endSession();
+      }
       return res.status(400).json(apiResponse(400, false, `Order cannot be cancelled in ${order.orderStatus} status`));
     }
 
@@ -783,15 +816,19 @@ exports.cancelOrder = async (req, res) => {
     if (order.paymentMethod === "Online" && order.paymentStatus === "Paid") {
       if (!order.phonepeMerchantOrderId) {
         console.log("No valid PhonePe merchant order ID found", requestId);
-        await session.abortTransaction();
-        session.endSession();
+        if (useTransactions) {
+          await session.abortTransaction();
+          session.endSession();
+        }
         return res.status(400).json(apiResponse(400, false, "No valid PhonePe merchant order ID found"));
       }
 
       if (order.refund && order.refund.refundTransactionId) {
         console.log("Refund already initiated for order:", orderId, requestId);
-        await session.commitTransaction();
-        session.endSession();
+        if (useTransactions) {
+          await session.commitTransaction();
+          session.endSession();
+        }
         return res.status(400).json(apiResponse(400, false, "Refund already initiated"));
       }
 
@@ -823,7 +860,7 @@ exports.cancelOrder = async (req, res) => {
     }
 
     // Save order changes
-    await order.save({ session });
+    await order.save(useTransactions ? { session } : {});
     console.log("Order status updated to Cancelled:", orderId, requestId);
 
     // Update stock for each item in orderDetails
@@ -852,7 +889,7 @@ exports.cancelOrder = async (req, res) => {
       }
 
       // Find item details
-      const itemDetail = await ItemDetail.findOne({ itemId: orderDetail.itemId }).session(session);
+      const itemDetail = await ItemDetail.findOne({ itemId: orderDetail.itemId }, null, useTransactions ? { session } : {});
       if (!itemDetail) {
         console.log(`Item detail not found for itemId ${orderDetail.itemId}`, requestId);
         throw new Error(`Item detail for itemId ${orderDetail.itemId} not found`);
@@ -882,7 +919,7 @@ exports.cancelOrder = async (req, res) => {
       sizeEntry.isOutOfStock = sizeEntry.stock === 0;
 
       // Save the itemDetail to trigger the post-save hook
-      await itemDetail.save({ session });
+      await itemDetail.save(useTransactions ? { session } : {});
 
       console.log(
         `Stock restored for itemId ${orderDetail.itemId}, skuId ${orderDetail.skuId}, quantity: ${orderDetail.quantity}, new stock: ${sizeEntry.stock}, isOutOfStock: ${sizeEntry.isOutOfStock}`,
@@ -891,16 +928,20 @@ exports.cancelOrder = async (req, res) => {
     }
 
     // Commit transaction
-    await session.commitTransaction();
-    session.endSession();
+    if (useTransactions) {
+      await session.commitTransaction();
+      session.endSession();
+    }
 
     // Populate order details
     const enrichedOrder = await populateOrderDetails(order, userId);
     console.log(`Order cancelled successfully: ${orderId}`, requestId);
     return res.status(200).json(apiResponse(200, true, "Order cancelled successfully", enrichedOrder));
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
+    if (useTransactions && session) {
+      await session.abortTransaction();
+      session.endSession();
+    }
     console.log(`Error cancelling order: ${error.message}`, requestId);
     return res.status(500).json(apiResponse(500, false, error.message || "Error while cancelling order"));
   }

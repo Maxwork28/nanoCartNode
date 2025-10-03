@@ -94,7 +94,7 @@ async function seedDatabase() {
     console.log('Database dropped');
 
     // Sample data
-    const imageUrl = 'https://maatebucket.s3.ap-south-1.amazonaws.com/Nanocart/categories/68daf0700ea3984a354f9b4f/subCategories/68daf0710ea3984a354f9b74/item/68daf0710ea3984a354f9be7/1759179201290_casual_summer_top_001.png';
+    const imageUrl = 'https://maatebucket.s3.ap-south-1.amazonaws.com/NanoCart/categories/68dd80da116ef56486599ecc/1759346906947_img1.jpg';
 
     // Categories - Create with staggered dates for better trends visualization
     const categories = await Category.insertMany([
@@ -1150,7 +1150,10 @@ async function seedDatabase() {
               { size: 'XS', stock: 20, skuId: generateUniqueId() },
               { size: 'S', stock: 25, skuId: generateUniqueId() },
               { size: 'M', stock: 20, skuId: generateUniqueId() },
-              { size: 'L', stock: 10, skuId: generateUniqueId() },
+              { size: 'L', stock: 15, skuId: generateUniqueId() },
+              { size: 'XL', stock: 10, skuId: generateUniqueId() },
+              { size: '2XL', stock: 5, skuId: generateUniqueId() },
+              { size: '3XL', stock: 5, skuId: generateUniqueId() },
             ],
           },
         ],
@@ -1174,6 +1177,21 @@ async function seedDatabase() {
             size: 'L', 
             inches: new Map([['bust', 38], ['waist', 32], ['hips', 40]]), 
             cm: new Map([['bust', 96.5], ['waist', 81.3], ['hips', 101.6]]) 
+          },
+          { 
+            size: 'XL', 
+            inches: new Map([['bust', 40], ['waist', 34], ['hips', 42]]), 
+            cm: new Map([['bust', 101.6], ['waist', 86.4], ['hips', 106.7]]) 
+          },
+          { 
+            size: '2XL', 
+            inches: new Map([['bust', 42], ['waist', 36], ['hips', 44]]), 
+            cm: new Map([['bust', 106.7], ['waist', 91.4], ['hips', 111.8]]) 
+          },
+          { 
+            size: '3XL', 
+            inches: new Map([['bust', 44], ['waist', 38], ['hips', 46]]), 
+            cm: new Map([['bust', 111.8], ['waist', 96.5], ['hips', 116.8]]) 
           }
         ],
         howToMeasure: [
@@ -1200,20 +1218,57 @@ async function seedDatabase() {
             hexCode: '#C0C0C0',
             images: [{ url: imageUrl, priority: 1, isTbyb: false, itemDetailImageId: generateUniqueId() }],
             sizes: [
-              { size: 'Standard', stock: 30, skuId: generateUniqueId() },
+              { size: 'XS', stock: 10, skuId: generateUniqueId() },
+              { size: 'S', stock: 15, skuId: generateUniqueId() },
+              { size: 'M', stock: 20, skuId: generateUniqueId() },
+              { size: 'L', stock: 15, skuId: generateUniqueId() },
+              { size: 'XL', stock: 10, skuId: generateUniqueId() },
+              { size: '2XL', stock: 5, skuId: generateUniqueId() },
+              { size: '3XL', stock: 5, skuId: generateUniqueId() },
             ],
           },
         ],
         sizeChart: [
           { 
-            size: 'Standard', 
-            inches: new Map([['height', 12], ['width', 8]]), 
-            cm: new Map([['height', 30.5], ['width', 20.3]]) 
+            size: 'XS', 
+            inches: new Map([['bust', 32], ['waist', 26], ['hips', 34]]), 
+            cm: new Map([['bust', 81.3], ['waist', 66], ['hips', 86.4]]) 
+          },
+          { 
+            size: 'S', 
+            inches: new Map([['bust', 34], ['waist', 28], ['hips', 36]]), 
+            cm: new Map([['bust', 86.4], ['waist', 71.1], ['hips', 91.4]]) 
+          },
+          { 
+            size: 'M', 
+            inches: new Map([['bust', 36], ['waist', 30], ['hips', 38]]), 
+            cm: new Map([['bust', 91.4], ['waist', 76.2], ['hips', 96.5]]) 
+          },
+          { 
+            size: 'L', 
+            inches: new Map([['bust', 38], ['waist', 32], ['hips', 40]]), 
+            cm: new Map([['bust', 96.5], ['waist', 81.3], ['hips', 101.6]]) 
+          },
+          { 
+            size: 'XL', 
+            inches: new Map([['bust', 40], ['waist', 34], ['hips', 42]]), 
+            cm: new Map([['bust', 101.6], ['waist', 86.4], ['hips', 106.7]]) 
+          },
+          { 
+            size: '2XL', 
+            inches: new Map([['bust', 42], ['waist', 36], ['hips', 44]]), 
+            cm: new Map([['bust', 106.7], ['waist', 91.4], ['hips', 111.8]]) 
+          },
+          { 
+            size: '3XL', 
+            inches: new Map([['bust', 44], ['waist', 38], ['hips', 46]]), 
+            cm: new Map([['bust', 111.8], ['waist', 96.5], ['hips', 116.8]]) 
           }
         ],
         howToMeasure: [
-          new Map([['Height', 'Measure from base to top']]),
-          new Map([['Width', 'Measure across the widest part']])
+          new Map([['Bust', 'Measure around the fullest part of your bust']]),
+          new Map([['Waist', 'Measure around your natural waistline']]),
+          new Map([['Hips', 'Measure around the fullest part of your hips']])
         ],
         isSize: true,
         isMultipleColor: false,
@@ -1234,20 +1289,57 @@ async function seedDatabase() {
             hexCode: '#000000',
             images: [{ url: imageUrl, priority: 1, isTbyb: false, itemDetailImageId: generateUniqueId() }],
             sizes: [
-              { size: 'Standard', stock: 20, skuId: generateUniqueId() },
+              { size: 'XS', stock: 5, skuId: generateUniqueId() },
+              { size: 'S', stock: 8, skuId: generateUniqueId() },
+              { size: 'M', stock: 12, skuId: generateUniqueId() },
+              { size: 'L', stock: 10, skuId: generateUniqueId() },
+              { size: 'XL', stock: 8, skuId: generateUniqueId() },
+              { size: '2XL', stock: 5, skuId: generateUniqueId() },
+              { size: '3XL', stock: 2, skuId: generateUniqueId() },
             ],
           },
         ],
         sizeChart: [
           { 
-            size: 'Standard', 
-            inches: new Map([['length', 70], ['width', 30]]), 
-            cm: new Map([['length', 177.8], ['width', 76.2]]) 
+            size: 'XS', 
+            inches: new Map([['bust', 32], ['waist', 26], ['hips', 34]]), 
+            cm: new Map([['bust', 81.3], ['waist', 66], ['hips', 86.4]]) 
+          },
+          { 
+            size: 'S', 
+            inches: new Map([['bust', 34], ['waist', 28], ['hips', 36]]), 
+            cm: new Map([['bust', 86.4], ['waist', 71.1], ['hips', 91.4]]) 
+          },
+          { 
+            size: 'M', 
+            inches: new Map([['bust', 36], ['waist', 30], ['hips', 38]]), 
+            cm: new Map([['bust', 91.4], ['waist', 76.2], ['hips', 96.5]]) 
+          },
+          { 
+            size: 'L', 
+            inches: new Map([['bust', 38], ['waist', 32], ['hips', 40]]), 
+            cm: new Map([['bust', 96.5], ['waist', 81.3], ['hips', 101.6]]) 
+          },
+          { 
+            size: 'XL', 
+            inches: new Map([['bust', 40], ['waist', 34], ['hips', 42]]), 
+            cm: new Map([['bust', 101.6], ['waist', 86.4], ['hips', 106.7]]) 
+          },
+          { 
+            size: '2XL', 
+            inches: new Map([['bust', 42], ['waist', 36], ['hips', 44]]), 
+            cm: new Map([['bust', 106.7], ['waist', 91.4], ['hips', 111.8]]) 
+          },
+          { 
+            size: '3XL', 
+            inches: new Map([['bust', 44], ['waist', 38], ['hips', 46]]), 
+            cm: new Map([['bust', 111.8], ['waist', 96.5], ['hips', 116.8]]) 
           }
         ],
         howToMeasure: [
-          new Map([['Length', 'Measure the running surface length']]),
-          new Map([['Width', 'Measure the running surface width']])
+          new Map([['Bust', 'Measure around the fullest part of your bust']]),
+          new Map([['Waist', 'Measure around your natural waistline']]),
+          new Map([['Hips', 'Measure around the fullest part of your hips']])
         ],
         isSize: true,
         isMultipleColor: false,
@@ -1261,31 +1353,68 @@ async function seedDatabase() {
         searchKeywords: ['treadmill specifications', 'fitness equipment details', 'home gym setup', 'treadmill assembly'],
       },
       {
-        itemId: items[6]._id, // Low Stock Smartphone
+        itemId: items[6]._id, // Kids Cartoon T-Shirt
         imagesByColor: [
           {
-            color: 'Gold',
-            hexCode: '#FFD700',
+            color: 'Yellow',
+            hexCode: '#FFFF00',
             images: [{ url: imageUrl, priority: 1, isTbyb: false, itemDetailImageId: generateUniqueId() }],
             sizes: [
-              { size: 'Standard', stock: 5, skuId: generateUniqueId() },
+              { size: 'XS', stock: 15, skuId: generateUniqueId() },
+              { size: 'S', stock: 20, skuId: generateUniqueId() },
+              { size: 'M', stock: 25, skuId: generateUniqueId() },
+              { size: 'L', stock: 20, skuId: generateUniqueId() },
+              { size: 'XL', stock: 15, skuId: generateUniqueId() },
+              { size: '2XL', stock: 10, skuId: generateUniqueId() },
+              { size: '3XL', stock: 5, skuId: generateUniqueId() },
             ],
           },
         ],
         sizeChart: [
           { 
-            size: 'Standard', 
-            inches: new Map([['width', 3], ['height', 6]]), 
-            cm: new Map([['width', 7.6], ['height', 15.2]]) 
+            size: 'XS', 
+            inches: new Map([['chest', 24], ['length', 18]]), 
+            cm: new Map([['chest', 61], ['length', 45.7]]) 
+          },
+          { 
+            size: 'S', 
+            inches: new Map([['chest', 26], ['length', 19]]), 
+            cm: new Map([['chest', 66], ['length', 48.3]]) 
+          },
+          { 
+            size: 'M', 
+            inches: new Map([['chest', 28], ['length', 20]]), 
+            cm: new Map([['chest', 71.1], ['length', 50.8]]) 
+          },
+          { 
+            size: 'L', 
+            inches: new Map([['chest', 30], ['length', 21]]), 
+            cm: new Map([['chest', 76.2], ['length', 53.3]]) 
+          },
+          { 
+            size: 'XL', 
+            inches: new Map([['chest', 32], ['length', 22]]), 
+            cm: new Map([['chest', 81.3], ['length', 55.9]]) 
+          },
+          { 
+            size: '2XL', 
+            inches: new Map([['chest', 34], ['length', 23]]), 
+            cm: new Map([['chest', 86.4], ['length', 58.4]]) 
+          },
+          { 
+            size: '3XL', 
+            inches: new Map([['chest', 36], ['length', 24]]), 
+            cm: new Map([['chest', 91.4], ['length', 61]]) 
           }
         ],
         howToMeasure: [
-          new Map([['Screen Size', 'Measure diagonally across the screen']])
+          new Map([['Chest', 'Measure around the fullest part of your chest']]),
+          new Map([['Length', 'Measure from shoulder to desired length']])
         ],
-        isSize: false,
+        isSize: true,
         isMultipleColor: false,
         deliveryDescription: 'Delivered in 2-3 days',
-        About: 'Limited edition smartphone with advanced features',
+        About: 'Fun cartoon printed t-shirt that kids will love',
         PPQ: [{ minQty: 1, maxQty: 2, pricePerUnit: 32000 }],
         deliveryPincode: [400001],
         returnPolicy: '30-day return policy',
@@ -1294,31 +1423,69 @@ async function seedDatabase() {
         searchKeywords: ['smartphone details', 'limited edition', 'low stock', 'mobile specifications'],
       },
       {
-        itemId: items[7]._id, // Out of Stock Tablet
+        itemId: items[7]._id, // Princess Dress for Girls
         imagesByColor: [
           {
-            color: 'Silver',
-            hexCode: '#C0C0C0',
+            color: 'Pink',
+            hexCode: '#FFC0CB',
             images: [{ url: imageUrl, priority: 1, isTbyb: false, itemDetailImageId: generateUniqueId() }],
             sizes: [
-              { size: 'Standard', stock: 0, skuId: generateUniqueId() },
+              { size: 'XS', stock: 8, skuId: generateUniqueId() },
+              { size: 'S', stock: 10, skuId: generateUniqueId() },
+              { size: 'M', stock: 12, skuId: generateUniqueId() },
+              { size: 'L', stock: 8, skuId: generateUniqueId() },
+              { size: 'XL', stock: 5, skuId: generateUniqueId() },
+              { size: '2XL', stock: 3, skuId: generateUniqueId() },
+              { size: '3XL', stock: 2, skuId: generateUniqueId() },
             ],
           },
         ],
         sizeChart: [
           { 
-            size: 'Standard', 
-            inches: new Map([['width', 8], ['height', 10]]), 
-            cm: new Map([['width', 20.3], ['height', 25.4]]) 
+            size: 'XS', 
+            inches: new Map([['bust', 22], ['waist', 20], ['hips', 24]]), 
+            cm: new Map([['bust', 55.9], ['waist', 50.8], ['hips', 61]]) 
+          },
+          { 
+            size: 'S', 
+            inches: new Map([['bust', 24], ['waist', 22], ['hips', 26]]), 
+            cm: new Map([['bust', 61], ['waist', 55.9], ['hips', 66]]) 
+          },
+          { 
+            size: 'M', 
+            inches: new Map([['bust', 26], ['waist', 24], ['hips', 28]]), 
+            cm: new Map([['bust', 66], ['waist', 61], ['hips', 71.1]]) 
+          },
+          { 
+            size: 'L', 
+            inches: new Map([['bust', 28], ['waist', 26], ['hips', 30]]), 
+            cm: new Map([['bust', 71.1], ['waist', 66], ['hips', 76.2]]) 
+          },
+          { 
+            size: 'XL', 
+            inches: new Map([['bust', 30], ['waist', 28], ['hips', 32]]), 
+            cm: new Map([['bust', 76.2], ['waist', 71.1], ['hips', 81.3]]) 
+          },
+          { 
+            size: '2XL', 
+            inches: new Map([['bust', 32], ['waist', 30], ['hips', 34]]), 
+            cm: new Map([['bust', 81.3], ['waist', 76.2], ['hips', 86.4]]) 
+          },
+          { 
+            size: '3XL', 
+            inches: new Map([['bust', 34], ['waist', 32], ['hips', 36]]), 
+            cm: new Map([['bust', 86.4], ['waist', 81.3], ['hips', 91.4]]) 
           }
         ],
         howToMeasure: [
-          new Map([['Screen Size', 'Measure diagonally across the screen']])
+          new Map([['Bust', 'Measure around the fullest part of your bust']]),
+          new Map([['Waist', 'Measure around your natural waistline']]),
+          new Map([['Hips', 'Measure around the fullest part of your hips']])
         ],
-        isSize: false,
+        isSize: true,
         isMultipleColor: false,
-        deliveryDescription: 'Currently out of stock',
-        About: 'Popular tablet model currently unavailable',
+        deliveryDescription: 'Delivered in 3-5 days',
+        About: 'Beautiful princess dress for little girls',
         PPQ: [{ minQty: 1, maxQty: 1, pricePerUnit: 22000 }],
         deliveryPincode: [400001],
         returnPolicy: '30-day return policy',
@@ -1373,32 +1540,69 @@ async function seedDatabase() {
         searchKeywords: ['hoodie details', 'limited edition', 'fleece material', 'premium clothing'],
       },
       {
-        itemId: items[9]._id, // Rare Sports Shoes
+        itemId: items[9]._id, // Designer Handbag
         imagesByColor: [
           {
-            color: 'White',
-            hexCode: '#FFFFFF',
+            color: 'Brown',
+            hexCode: '#8B4513',
             images: [{ url: imageUrl, priority: 1, isTbyb: false, itemDetailImageId: generateUniqueId() }],
             sizes: [
-              { size: '9', stock: 1, skuId: generateUniqueId() },
+              { size: 'XS', stock: 3, skuId: generateUniqueId() },
+              { size: 'S', stock: 5, skuId: generateUniqueId() },
+              { size: 'M', stock: 8, skuId: generateUniqueId() },
+              { size: 'L', stock: 6, skuId: generateUniqueId() },
+              { size: 'XL', stock: 4, skuId: generateUniqueId() },
+              { size: '2XL', stock: 2, skuId: generateUniqueId() },
+              { size: '3XL', stock: 1, skuId: generateUniqueId() },
             ],
           },
         ],
         sizeChart: [
           { 
-            size: '9', 
-            inches: new Map([['length', 11], ['width', 4]]), 
-            cm: new Map([['length', 27.9], ['width', 10.2]]) 
+            size: 'XS', 
+            inches: new Map([['length', 8], ['width', 6], ['height', 4]]), 
+            cm: new Map([['length', 20.3], ['width', 15.2], ['height', 10.2]]) 
+          },
+          { 
+            size: 'S', 
+            inches: new Map([['length', 9], ['width', 7], ['height', 5]]), 
+            cm: new Map([['length', 22.9], ['width', 17.8], ['height', 12.7]]) 
+          },
+          { 
+            size: 'M', 
+            inches: new Map([['length', 10], ['width', 8], ['height', 6]]), 
+            cm: new Map([['length', 25.4], ['width', 20.3], ['height', 15.2]]) 
+          },
+          { 
+            size: 'L', 
+            inches: new Map([['length', 11], ['width', 9], ['height', 7]]), 
+            cm: new Map([['length', 27.9], ['width', 22.9], ['height', 17.8]]) 
+          },
+          { 
+            size: 'XL', 
+            inches: new Map([['length', 12], ['width', 10], ['height', 8]]), 
+            cm: new Map([['length', 30.5], ['width', 25.4], ['height', 20.3]]) 
+          },
+          { 
+            size: '2XL', 
+            inches: new Map([['length', 13], ['width', 11], ['height', 9]]), 
+            cm: new Map([['length', 33], ['width', 27.9], ['height', 22.9]]) 
+          },
+          { 
+            size: '3XL', 
+            inches: new Map([['length', 14], ['width', 12], ['height', 10]]), 
+            cm: new Map([['length', 35.6], ['width', 30.5], ['height', 25.4]]) 
           }
         ],
         howToMeasure: [
-          new Map([['Foot Length', 'Measure from heel to longest toe']]),
-          new Map([['Foot Width', 'Measure across the widest part of your foot']])
+          new Map([['Length', 'Measure the length of the bag']]),
+          new Map([['Width', 'Measure the width of the bag']]),
+          new Map([['Height', 'Measure the height of the bag']])
         ],
         isSize: true,
         isMultipleColor: false,
-        deliveryDescription: 'Delivered in 2-4 days',
-        About: 'Rare sports shoes with premium quality and minimal available stock',
+        deliveryDescription: 'Delivered in 3-5 days',
+        About: 'Elegant designer handbag for women',
         PPQ: [{ minQty: 1, maxQty: 1, pricePerUnit: 7200 }],
         deliveryPincode: [400001],
         returnPolicy: '30-day return policy',
@@ -1561,7 +1765,7 @@ async function seedDatabase() {
           {
             itemId: items[0]._id,
             quantity: 1,
-            size: 'Standard',
+            size: 'M',
             color: 'Black',
             skuId: itemDetails[0].imagesByColor[0].sizes[0].skuId,
             addedAt: new Date(),
@@ -1602,7 +1806,7 @@ async function seedDatabase() {
           {
             itemId: items[0]._id,
             quantity: 1,
-            size: 'Standard',
+            size: 'M',
             color: 'Black',
             skuId: itemDetails[0].imagesByColor[0].sizes[0].skuId,
             addedAt: new Date('2025-06-30'),
@@ -1632,7 +1836,7 @@ async function seedDatabase() {
           {
             itemId: items[1]._id,
             quantity: 1,
-            size: 'Standard',
+            size: 'M',
             color: 'Black',
             skuId: itemDetails[1].imagesByColor[0].sizes[0].skuId,
             addedAt: new Date('2025-07-25'),
@@ -1662,7 +1866,7 @@ async function seedDatabase() {
           {
             itemId: items[3]._id,
             quantity: 1,
-            size: 'Standard',
+            size: 'M',
             color: 'Red',
             skuId: itemDetails[3].imagesByColor[0].sizes[0].skuId,
             addedAt: new Date('2025-08-25'),
@@ -1692,7 +1896,7 @@ async function seedDatabase() {
           {
             itemId: items[5]._id,
             quantity: 1,
-            size: 'Standard',
+            size: 'M',
             color: 'Black',
             skuId: itemDetails[5].imagesByColor[0].sizes[0].skuId,
             addedAt: new Date('2025-09-20'),

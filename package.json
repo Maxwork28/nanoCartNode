@@ -34,6 +34,7 @@
     "pdfkit": "^0.17.2",
     "pg-sdk-node": "^2.0.2",
     "phonepe-kit": "^1.1.1",
+    "react-hot-toast": "^2.6.0",
     "sanitize-html": "^2.17.0"
   }
 }

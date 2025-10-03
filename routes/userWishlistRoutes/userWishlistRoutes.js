@@ -6,7 +6,8 @@ const {
   addToWishlist,
   removeItemFromWishlist,
   getUserWishlist,
-  getUserWishlistByAdmin
+  getUserWishlistByAdmin,
+  filterWishlistItems
 } = require("../../controllers/userWishlistController/userWishlistController");
 
 const { verifyToken, verifyTokenAndRole } = require("../../middlewares/verifyToken");
@@ -20,6 +21,9 @@ router.put("/remove", ...verifyTokenAndRole(['User']), removeItemFromWishlist);
 
 // Route to fetch the user's wishlist
 router.get("/", ...verifyTokenAndRole(['User']), getUserWishlist);
+
+// Route to filter wishlist items
+router.post("/filter", ...verifyTokenAndRole(['User']), filterWishlistItems);
 
 // Route to fetch the user's wishlist (Admin and SubAdmin can access)
 router.get("/admin/:userId", ...verifyTokenAndRole(['Admin', 'SubAdmin']),auditLogger(), getUserWishlistByAdmin);

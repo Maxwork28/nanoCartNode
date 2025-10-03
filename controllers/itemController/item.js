@@ -1111,30 +1111,75 @@ exports.findItems = async (req, res) => {
 
     // Handle filters, including price range
     if (filters && Array.isArray(filters) && filters.length > 0) {
-      const filterConditions = filters.map(filter => {
-        if (filter.key === 'Price range' && filter.value) {
-          // Parse price range (e.g., "₹500 - ₹1000")
-          const match = filter.value.match(/₹(\d+)\s*-\s*₹(\d+)/);
-          if (match) {
-            const [, min, max] = match;
-            console.log('💰 Parsed price range:', { min: Number(min), max: Number(max) });
-            return {
-              $elemMatch: {
-                key: filter.key,
-                value: { $gte: Number(min), $lte: Number(max) },
-              },
-            };
-          } else {
-            console.warn('⚠️ Invalid price range format:', filter.value);
-            return { $elemMatch: { key: filter.key, value: filter.value } };
-          }
+      // Group filters by key to implement OR logic within each filter type
+      const filterGroups = {};
+      
+      filters.forEach(filter => {
+        if (!filterGroups[filter.key]) {
+          filterGroups[filter.key] = [];
         }
-        console.log('🔍 Adding filter:', filter);
-        return { $elemMatch: { key: filter.key, value: filter.value } };
+        filterGroups[filter.key].push(filter);
       });
 
-      query.filters = { $all: filterConditions };
-      console.log('✅ Added filters to query:', JSON.stringify(query.filters, null, 2));
+      // Create filter conditions with OR logic within each group
+      const filterConditions = Object.entries(filterGroups).map(([key, groupFilters]) => {
+        if (key === 'Price range') {
+          // Handle price range filters - for now, use the first valid price range
+          // Price ranges are typically exclusive, so we'll use the first one
+          const firstFilter = groupFilters[0];
+          if (firstFilter && firstFilter.value) {
+            const match = firstFilter.value.match(/₹(\d+)\s*-\s*₹(\d+)/);
+            if (match) {
+              const [, min, max] = match;
+              console.log('💰 Parsed price range:', { min: Number(min), max: Number(max) });
+              return { 
+                filters: { 
+                  $elemMatch: { 
+                    key: firstFilter.key, 
+                    value: { $gte: Number(min), $lte: Number(max) } 
+                  } 
+                } 
+              };
+            } else {
+              console.warn('⚠️ Invalid price range format:', firstFilter.value);
+              return { 
+                filters: { 
+                  $elemMatch: { 
+                    key: firstFilter.key, 
+                    value: firstFilter.value 
+                  } 
+                } 
+              };
+            }
+          }
+          return null;
+        } else {
+          // Handle other filters with OR logic - use $in for multiple values of same key
+          const values = groupFilters.map(filter => {
+            console.log('🔍 Adding filter:', filter);
+            return filter.value;
+          });
+          
+          return { 
+            filters: { 
+              $elemMatch: { 
+                key: key, 
+                value: { $in: values } 
+              } 
+            } 
+          };
+        }
+      });
+
+      // Use AND logic between different filter types, OR logic within each type
+      if (filterConditions.length > 1) {
+        query.$and = filterConditions;
+      } else {
+        Object.assign(query, filterConditions[0]);
+      }
+      
+      console.log('✅ Added filters to query:', JSON.stringify(query, null, 2));
+      console.log('🔍 Filter conditions created:', filterConditions.length);
     } else {
       console.log('ℹ️ No filters applied (filters array is empty)');
     }
