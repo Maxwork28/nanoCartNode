@@ -2077,7 +2077,7 @@ async function seedDatabase() {
         ],
         invoice: [{ key: 'subtotal', values: '12000' }, { key: 'tax', values: '1200' }],
         shippingAddressId: partnerAddresses[0]._id,
-        orderStatus: 'Ready to Dispatch',
+        orderStatus: 'Ready for Dispatch',
         isOrderPlaced: true,
         isOrderReturned: false,
         phonepeOrderId: generateUniqueId(),
