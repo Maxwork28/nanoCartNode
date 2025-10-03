@@ -71,25 +71,25 @@ GET /api/category/search
 
 ### 1. Get All Categories (Paginated)
 ```bash
-curl -X GET "http://localhost:4000/api/category/search?page=1&limit=10" \
+curl -X GET "https://api.maahi.lifestyle/api/category/search?page=1&limit=10" \
   -H "Authorization: Bearer <your-token>"
 ```
 
 ### 2. Search with Keyword
 ```bash
-curl -X GET "http://localhost:4000/api/category/search?keyword=electronics&page=1&limit=5" \
+curl -X GET "https://api.maahi.lifestyle/api/category/search?keyword=electronics&page=1&limit=5" \
   -H "Authorization: Bearer <your-token>"
 ```
 
 ### 3. Search with Sorting
 ```bash
-curl -X GET "http://localhost:4000/api/category/search?keyword=clothing&sortBy=name&sortOrder=asc" \
+curl -X GET "https://api.maahi.lifestyle/api/category/search?keyword=clothing&sortBy=name&sortOrder=asc" \
   -H "Authorization: Bearer <your-token>"
 ```
 
 ### 4. Advanced Search
 ```bash
-curl -X GET "http://localhost:4000/api/category/search?keyword=fashion&page=2&limit=20&sortBy=createdAt&sortOrder=desc" \
+curl -X GET "https://api.maahi.lifestyle/api/category/search?keyword=fashion&page=2&limit=20&sortBy=createdAt&sortOrder=desc" \
   -H "Authorization: Bearer <your-token>"
 ```
 
