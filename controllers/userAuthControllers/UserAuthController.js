@@ -486,23 +486,18 @@ exports.sendPhoneOtp = async (req, res) => {
     if (demoPhoneNumbers.includes(phoneNumber)) {
       console.log('🎭 Demo phone number detected, using demo OTP: 123456');
       
+      // Clean up any existing OTP records for this phone number
+      await PhoneOTP.deleteMany({ phoneNumber });
+      console.log('🧹 Cleaned up old OTP records for demo number');
+      
       // Store demo OTP in database
-      const phoneNumberExist = await PhoneOTP.findOne({ phoneNumber });
-      if (!phoneNumberExist) {
-        await PhoneOTP.create({ 
-          phoneNumber, 
-          otp: '123456', // Demo OTP
-          expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
-          isVerified: false
-        });
-        console.log('✅ New demo OTP record created in database');
-      } else {
-        phoneNumberExist.otp = '123456';
-        phoneNumberExist.expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-        phoneNumberExist.isVerified = false;
-        await phoneNumberExist.save();
-        console.log('✅ Existing demo OTP record updated in database');
-      }
+      await PhoneOTP.create({ 
+        phoneNumber, 
+        otp: '123456', // Demo OTP
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+        isVerified: false
+      });
+      console.log('✅ New demo OTP record created in database');
 
       console.log('🚀 Demo OTP sent successfully, returning response');
       return res.status(200).json(apiResponse(200, true, "Demo OTP sent successfully (123456)"));
@@ -517,28 +512,48 @@ exports.sendPhoneOtp = async (req, res) => {
       // MSG91 generates its own OTP and doesn't return it for security
       // We only store a reference that OTP was sent, not the actual OTP
       console.log('💾 Storing OTP reference in database...');
-    const phoneNumberExist = await PhoneOTP.findOne({ phoneNumber });
-    if (!phoneNumberExist) {
-        await PhoneOTP.create({ 
-          phoneNumber, 
-          otp: 'SENT_VIA_MSG91', // Placeholder since MSG91 handles the actual OTP
-          expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
-          isVerified: false
-        });
-        console.log('✅ New OTP reference record created in database');
-    } else {
-        phoneNumberExist.otp = 'SENT_VIA_MSG91';
-        phoneNumberExist.expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-        phoneNumberExist.isVerified = false;
-      await phoneNumberExist.save();
-        console.log('✅ Existing OTP reference record updated in database');
-      }
+      
+      // Clean up any existing OTP records for this phone number
+      await PhoneOTP.deleteMany({ phoneNumber });
+      console.log('🧹 Cleaned up old OTP records for phone number');
+      
+      // Create new OTP record
+      await PhoneOTP.create({ 
+        phoneNumber, 
+        otp: 'SENT_VIA_MSG91', // Placeholder since MSG91 handles the actual OTP
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+        isVerified: false
+      });
+      console.log('✅ New OTP reference record created in database');
 
       console.log('🚀 OTP sent successfully, returning response');
       return res.status(200).json(apiResponse(200, true, "OTP sent successfully"));
     } catch (msg91Error) {
       console.error("❌ MSG91 Error:", msg91Error.message);
       console.error("MSG91 Error stack:", msg91Error.stack);
+      
+      // Handle specific MSG91 errors
+      if (msg91Error.message.includes('Mobile no. already verified') || 
+          msg91Error.message.includes('already verified')) {
+        console.log('🔄 Phone number already verified by MSG91, creating verified OTP record');
+        
+        // Create a verified OTP record for already verified numbers
+        // Clean up any existing OTP records for this phone number
+        await PhoneOTP.deleteMany({ phoneNumber });
+        console.log('🧹 Cleaned up old OTP records for already verified number');
+        
+        // Create new verified OTP record
+        await PhoneOTP.create({ 
+          phoneNumber, 
+          otp: 'ALREADY_VERIFIED', // Special marker for already verified numbers
+          expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+          isVerified: true // Mark as already verified
+        });
+        console.log('✅ New verified OTP record created for already verified number');
+        
+        return res.status(200).json(apiResponse(200, true, "Phone number already verified. You can proceed with login."));
+      }
+      
       return res.status(500).json(apiResponse(500, false, "Failed to send OTP via SMS"));
     }
   } catch (error) {
@@ -609,6 +624,14 @@ exports.phoneOtpVerification = async (req, res) => {
         .json(apiResponse(200, true, "Demo phone verified successfully"));
     }
 
+    // Check if OTP is already verified (for numbers that were already verified by MSG91)
+    if (dbOtpEntry.otp === 'ALREADY_VERIFIED' && dbOtpEntry.isVerified) {
+      console.log('✅ Phone number already verified by MSG91, skipping verification');
+      return res
+        .status(200)
+        .json(apiResponse(200, true, "Phone already verified successfully"));
+    }
+
     // Use MSG91 to verify the OTP instead of comparing with stored value
     console.log('🔐 Verifying OTP with MSG91 service...');
     try {
@@ -616,19 +639,33 @@ exports.phoneOtpVerification = async (req, res) => {
       console.log('✅ MSG91 verification result:', verificationResult);
       
       if (verificationResult.success) {
-    dbOtpEntry.isVerified = true;
-    await dbOtpEntry.save();
+        dbOtpEntry.isVerified = true;
+        await dbOtpEntry.save();
         console.log('✅ OTP verified successfully, database updated');
         
-    return res
-      .status(200)
-      .json(apiResponse(200, true, "Phone verified successfully"));
+        return res
+          .status(200)
+          .json(apiResponse(200, true, "Phone verified successfully"));
       } else {
         console.log('❌ MSG91 verification failed');
         return res.status(401).json(apiResponse(401, false, "Invalid OTP"));
       }
     } catch (msg91Error) {
       console.error('❌ MSG91 verification error:', msg91Error.message);
+      
+      // Handle specific MSG91 errors
+      if (msg91Error.message.includes('Mobile no. already verified') || 
+          msg91Error.message.includes('already verified')) {
+        console.log('🔄 Phone number already verified by MSG91, marking as verified in database');
+        dbOtpEntry.isVerified = true;
+        await dbOtpEntry.save();
+        console.log('✅ OTP marked as verified due to MSG91 already verified status');
+        
+        return res
+          .status(200)
+          .json(apiResponse(200, true, "Phone verified successfully"));
+      }
+      
       return res.status(500).json(apiResponse(500, false, "OTP verification service error"));
     }
   } catch (error) {
@@ -841,14 +878,29 @@ exports.loginWithOTP = async (req, res) => {
 
     // Find user in User model
     console.log('🔍 Searching for user in MongoDB...');
-    const user = await User.findOne({ phoneNumber });
+    let user = await User.findOne({ phoneNumber });
     if (!user) {
       console.log('❌ User not found in MongoDB for phone:', phoneNumber);
-      return res
-        .status(404)
-        .json(
-          apiResponse(404, false, "User not found please be first signup ")
-        );
+      console.log('🔄 Auto-creating user for verified phone number...');
+      
+      // Auto-create user for verified phone numbers
+      user = await User.create({
+        name: `User_${phoneNumber}`, // Default name, can be updated later
+        phoneNumber: phoneNumber,
+        email: `${phoneNumber}@temp.com`, // Temporary email, can be updated later
+        isPhoneVerified: true,
+        isActive: true,
+        role: "User",
+        isPartner: false,
+      });
+      
+      console.log('✅ User auto-created successfully:', {
+        userId: user._id,
+        name: user.name,
+        phoneNumber: user.phoneNumber,
+        email: user.email,
+        role: user.role
+      });
     }
     console.log('✅ User found in MongoDB:', {
       userId: user._id,
